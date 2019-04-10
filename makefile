@@ -1,9 +1,31 @@
 # ----------------------------
 # group nb XXX
-# noma1 : name1 surname1
-# noma2 : name2 surname2
+# 42191600 : Alexandre Gobeaux
+# noma2 : Gilles Peiffer
 # ----------------------------
 
-# TODO complete the header with your group number, your noma's and full names
+all :
+	make compileAll
+	make run
 
-# TODO write your makefile here
+compileAll :
+	ozc -c Input.oz
+	make compile
+
+compile :
+	ozc -c PlayerManager.oz
+	ozc -c Player*.oz
+	ozc -c GUI.oz
+	ozc -c Main.oz
+
+compilePlayers : # compiles PlayerManager.oz too... can still use grep
+	ozc -c Player*.oz
+
+*.ozf :
+	ozc -c *.oz
+
+run :
+	ozengine Main.ozf
+
+clean : # Delete every file except .ozf for which we don't have .oz files
+	ls *.ozf | grep -v Player000bomber.ozf | grep -v Projet2019util.ozf | xargs rm
