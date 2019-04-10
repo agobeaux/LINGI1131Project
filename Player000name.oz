@@ -26,7 +26,8 @@ in
 
    
    proc{TreatStream Stream} %% TODO you may add some arguments if needed
-      %% TODO complete
+      case Stream of H|T then {Browser.browse 'okkkkkkkkkkkk'}
+      else skip end
    end
    
 
