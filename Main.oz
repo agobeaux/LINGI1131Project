@@ -103,25 +103,125 @@ define
       {SpawnPlayers Input.nbBombers PPlayers Spawns}
       
    end
-   proc {RunTurnByTurn}
-      proc {RunTurn N NbAlive PPlays}
-         if NbAlive =< 1 then skip end
-         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers} end
-         case PPlays of PPlay|T then ID State Action in
-            {Send PPlay getState(ID State)}
-            if State == off then {RunTurn N-1 NbAlive T} end
-            {Send PPlay doaction(_ Action)}
-            case Action % ATTENTION IL FAUT PREVENIR LES AUTRES DES ACTIONS EFFECTUEES
-            of move(Pos) then {Send PGUI movePlayer(ID Pos)}
-            [] bomb(Pos) then {Send PGUI spawnBomb(Pos)} % Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
-            else raise('Unrecognised msg in function Main.RunTurn') end
+
+   proc {SendMoveInfo PPlayersList Info}
+      case PPlayersList of PortP|T then ID in
+         Info = movePlayer(ID _)
+         if ID \= ID.id then {Send PortP info(Info)} end
+         {SendMoveInfo T Info}
+      [] nil then skip
+      else raise('Error in SendMoveInfo') end
+      end
+   end
+   proc {SendBombInfo PPlayersList Info}
+      case PPlayersList of PortP|T then 
+         {Send PortP info(Info)} % TODO : renvoie à celui qui a posé la bombe => à corriger
+         {SendBombInfo T Info}
+      [] nil then skip
+      else raise('Error in SendBombInfo') end
+      end
+   end
+   proc {SendBoxInfo PPlayersList Info}
+      case PPlayersList of PortP|T then 
+         {Send PortP info(Info)}
+         {SendBoxInfo T Info}
+      [] nil then skip
+      else raise('Error in SendBoxInfo') end
+      end
+   end
+   proc {SendBombExplodedInfo PPlayersList Info}
+      case PPlayersList of PortP|T then 
+         {Send PortP info(Info)}
+         {SendBombExplodedInfo T Info}
+      [] nil then skip
+      else raise('Error in SendBombExplodedInfo') end
+      end
+   end
+   
+   proc {ExplodeBomb Pos PortPlayer}
+      proc {ProcessExplode X Y}
+         {System.show 'Im in ProcessExplode !!!!!!!!!!!!!'} % TODO : delete
+         local Pos2 in
+            Pos2 = pt(x:X y:Y)
+            case {Nth {Nth Input.map Y} X}
+            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)}
+            [] 3 then {Send PGUI hideBonus(Pos2)} {Send PGUI spawnFire(Pos2)}
+            [] 1 then skip % wall
+            else {Send PGUI spawnFire(Pos2)}
             end
-            {RunTurn N-1 NbAlive T}
-         else raise('Problem in function Main.RunTurn') end
          end
       end
    in
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers}
+      {System.show 'Im in ExplodeBomb'} % TODO : delete
+      {Send PGUI hideBomb(Pos)}
+      {Send PortPlayer add(bomb 1 _)}
+      {SendBombExplodedInfo PPlayers bombExploded(Pos)}
+      case Pos of pt(x:X y:Y) then I in
+         for I in 1..Input.fire do
+            if X-I > 0 then
+               {ProcessExplode X-I Y}
+            end
+            if X+I =< Input.nbColumn then
+               {ProcessExplode X+I Y}
+            end
+            if Y-I > 0 then
+               {ProcessExplode X Y-I}
+            end
+            if Y+I =< Input.nbColumn then
+               {ProcessExplode X Y+I}
+            end
+         end
+      else raise('Problem in function ExplodeBomb') end
+      end
+   end
+            
+   
+   fun {ProcessBombs BombsList NbTurn}
+      {System.show NbTurn}
+      case BombsList
+      of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
+         if(Turn == NbTurn) then
+            {ExplodeBomb Pos PortPlayer}
+            {ProcessBombs T NbTurn}
+         else BombsList end
+      [] todo|T then {ProcessBombs T NbTurn}
+      [] H|T then {System.show H} BombsList
+      [] todo then todo
+      else raise('Problem in function ProcessBombs') end
+      end
+   end
+   
+   proc {RunTurnByTurn}
+      proc {RunTurn N NbAlive PPlays BombsList NbTurn}
+         if NbAlive =< 1 then skip end
+         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn} end % TODO : change nil
+         local W Z in
+            Z = {ProcessBombs BombsList NbTurn}
+
+            case PPlays of PPlay|T then ID State Action in
+               {Send PPlay getState(ID State)}
+               if State == off then {RunTurn N-1 NbAlive T BombsList NbTurn+1} end % TODO : change nil
+               {Send PPlay doaction(_ Action)}
+               case Action
+               of move(Pos) then
+                  {Send PGUI movePlayer(ID Pos)}
+                  {SendMoveInfo PPlayers movePlayer(ID Pos)}
+                  W = Z
+               [] bomb(Pos) then
+                  {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
+                  {SendBombInfo PPlayers bombPlanted(Pos)} % TODO : Garder les bombes en mémoire pour savoir quand les exploser
+                  W = Z|bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)|todo
+               else raise('Unrecognised msg in function Main.RunTurn') end
+               end
+               {Delay 2000}
+               {System.show W}
+               {RunTurn N-1 NbAlive T W NbTurn+1} % TODO CHANGE NIL
+            else raise('Problem in function Main.RunTurn') end
+            end
+         end
+      end
+   in
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers todo 1} % TODO : modify nil
    end
 
 in
@@ -138,10 +238,12 @@ in
    % Spawn bonuses, boxes and players
    {SpawnMap Input.map PPlayers}
    
+   {Delay 5000} % à modifier
+
    if Input.isTurnByTurn then
-      {RunTurnByTurn} % un thread ?
+      {RunTurnByTurn} % TODO un thread ?
    end
-   % else : RunSimul
+   % TODO : else : RunSimul
 
 
 end
