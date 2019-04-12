@@ -178,20 +178,25 @@ define
    
    fun {ProcessBombs BombsList NbTurn}
       {System.show NbTurn}
-      case BombsList
-      of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
-         if(Turn == NbTurn) then
-            {ExplodeBomb Pos PortPlayer}
-            {ProcessBombs T NbTurn}
-         else BombsList end
-      [] todo|T then {ProcessBombs T NbTurn}
-      [] H|T then {System.show H} BombsList
-      [] todo then todo
-      else raise('Problem in function ProcessBombs') end
+      if {Not {Value.isDet BombsList}} then
+         {System.show 'ProcessBombs not isDet'}
+         BombsList
+      else
+         case BombsList
+         of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
+            {System.show 'in case bomb'}
+            if(Turn == NbTurn) then
+               {ExplodeBomb Pos PortPlayer}
+               {ProcessBombs T NbTurn}
+            else BombsList end
+         [] H|T then raise('Problem in function ProcessBombs case H|T') end
+         else raise('Problem in function ProcessBombs else') end
+         end
       end
    end
    
    proc {RunTurnByTurn}
+      BombPort
       proc {RunTurn N NbAlive PPlays BombsList NbTurn}
          if NbAlive =< 1 then skip end
          if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn} end % TODO : change nil
@@ -210,18 +215,20 @@ define
                [] bomb(Pos) then
                   {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
                   {SendBombInfo PPlayers bombPlanted(Pos)} % TODO : Garder les bombes en mémoire pour savoir quand les exploser
-                  W = Z|bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)|todo
+                  {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
                else raise('Unrecognised msg in function Main.RunTurn') end
                end
                {Delay 2000}
-               {System.show W}
-               {RunTurn N-1 NbAlive T W NbTurn+1} % TODO CHANGE NIL
+               {System.show Z}
+               {RunTurn N-1 NbAlive T Z NbTurn+1} % TODO CHANGE NIL
             else raise('Problem in function Main.RunTurn') end
             end
          end
       end
+      BombsL
    in
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers todo 1} % TODO : modify nil
+      BombPort = {NewPort BombsL}
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1} % TODO : modify nil
    end
 
 in
