@@ -138,16 +138,52 @@ define
       end
    end
    
-   proc {ExplodeBomb Pos PortPlayer}
-      proc {ProcessExplode X Y}
+   proc {ExplodeBomb Pos PortPlayer HideFPort} % TODO : add HideF behaviour
+      fun {ProcessExplode X Y}
          {System.show 'Im in ProcessExplode !!!!!!!!!!!!!'} % TODO : delete
          local Pos2 in
             Pos2 = pt(x:X y:Y)
             case {Nth {Nth Input.map Y} X}
-            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)}
-            [] 3 then {Send PGUI hideBonus(Pos2)} {Send PGUI spawnFire(Pos2)}
-            [] 1 then skip % wall
-            else {Send PGUI spawnFire(Pos2)}
+            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
+            [] 3 then {Send PGUI hideBonus(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
+            [] 1 then false
+            else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true
+            end
+         end
+      end
+      proc {ProcessExplodeXM X Y Dx}
+         if Dx =< Input.fire then X2 in
+            X2 = X - Dx
+            if X2 > 0 then DoNext in
+               DoNext = {ProcessExplode X2 Y}
+               if DoNext then {ProcessExplodeXM X Y Dx+1} end
+            end
+         end
+      end
+      proc {ProcessExplodeXP X Y Dx}
+         if Dx =< Input.fire then X2 in
+            X2 = X + Dx
+            if X2 < Input.nbColumn then DoNext in
+               DoNext = {ProcessExplode X2 Y}
+               if DoNext then {ProcessExplodeXP X Y Dx+1} end
+            end
+         end
+      end
+      proc {ProcessExplodeYM X Y Dy}
+         if Dy =< Input.fire then Y2 in
+            Y2 = Y - Dy
+            if Y2 > 0 then DoNext in
+               DoNext = {ProcessExplode X Y2}
+               if DoNext then {ProcessExplodeYM X Y Dy+1} end
+            end
+         end
+      end
+      proc {ProcessExplodeYP X Y Dy}
+         if Dy =< Input.fire then Y2 in
+            Y2 = Y + Dy
+            if Y2 < Input.nbRow then DoNext in
+               DoNext = {ProcessExplode X Y2}
+               if DoNext then {ProcessExplodeYP X Y Dy+1} end
             end
          end
       end
@@ -156,38 +192,28 @@ define
       {Send PGUI hideBomb(Pos)}
       {Send PortPlayer add(bomb 1 _)}
       {SendBombExplodedInfo PPlayers bombExploded(Pos)}
-      case Pos of pt(x:X y:Y) then I in
-         for I in 1..Input.fire do
-            if X-I > 0 then
-               {ProcessExplode X-I Y}
-            end
-            if X+I =< Input.nbColumn then
-               {ProcessExplode X+I Y}
-            end
-            if Y-I > 0 then
-               {ProcessExplode X Y-I}
-            end
-            if Y+I =< Input.nbColumn then
-               {ProcessExplode X Y+I}
-            end
-         end
+      case Pos of pt(x:X y:Y) then
+         {ProcessExplodeXM X Y 1}
+         {ProcessExplodeXP X Y 1}
+         {ProcessExplodeYM X Y 1}
+         {ProcessExplodeYP X Y 1}
       else raise('Problem in function ExplodeBomb') end
       end
    end
             
    
-   fun {ProcessBombs BombsList NbTurn}
-      {System.show NbTurn}
+   fun {ProcessBombs BombsList NbTurn HideFPort}
+      {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
          BombsList
       else
          case BombsList
          of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
-            {System.show 'in case bomb'}
+            {System.show 'in case bomb'} % TODO : delete
             if(Turn == NbTurn) then
-               {ExplodeBomb Pos PortPlayer}
-               {ProcessBombs T NbTurn}
+               {ExplodeBomb Pos PortPlayer HideFPort} % TODO : send sur le port
+               {ProcessBombs T NbTurn HideFPort}
             else BombsList end
          [] H|T then raise('Problem in function ProcessBombs case H|T') end
          else raise('Problem in function ProcessBombs else') end
@@ -195,41 +221,66 @@ define
       end
    end
    
+   
+   fun {ProcessHideF FireStream}
+      if {Not {Value.isDet FireStream}} then
+         {System.show 'ProcessHideF not isDet'}
+         FireStream
+      else
+         case FireStream
+         of hideFire(Pos)|T then
+            {Send PGUI hideFire(Pos)}
+            {ProcessHideF T}
+         [] H|T then raise('Problem in function ProcessHideF case H|T') end
+         else raise('Problem in function ProcessHideF else') end
+         end
+      end
+   end
+   
+   
    proc {RunTurnByTurn}
       BombPort
-      proc {RunTurn N NbAlive PPlays BombsList NbTurn}
+      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream}
          if NbAlive =< 1 then skip end
-         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn} end % TODO : change nil
-         local W Z in
-            Z = {ProcessBombs BombsList NbTurn}
+         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream}
+         else
+            
+            local NewBombsList NewHideFireStream in
+               NewHideFireStream = {ProcessHideF HideFireStream}
+               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort}
 
-            case PPlays of PPlay|T then ID State Action in
-               {Send PPlay getState(ID State)}
-               if State == off then {RunTurn N-1 NbAlive T BombsList NbTurn+1} end % TODO : change nil
-               {Send PPlay doaction(_ Action)}
-               case Action
-               of move(Pos) then
-                  {Send PGUI movePlayer(ID Pos)}
-                  {SendMoveInfo PPlayers movePlayer(ID Pos)}
-                  W = Z
-               [] bomb(Pos) then
-                  {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
-                  {SendBombInfo PPlayers bombPlanted(Pos)} % TODO : Garder les bombes en mémoire pour savoir quand les exploser
-                  {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
-               else raise('Unrecognised msg in function Main.RunTurn') end
+               case PPlays of PPlay|T then ID State Action in
+                  {Send PPlay getState(ID State)}
+                  if State == off then {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream} end
+                  {Send PPlay doaction(_ Action)}
+                  case Action
+                  of move(Pos) then
+                     {Send PGUI movePlayer(ID Pos)}
+                     {SendMoveInfo PPlayers movePlayer(ID Pos)}
+                  [] bomb(Pos) then
+                     {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
+                     {SendBombInfo PPlayers bombPlanted(Pos)}
+                     {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
+                  else raise('Unrecognised msg in function Main.RunTurn') end
+                  end
+                  {Delay 1500}
+                  {System.show NewBombsList}
+                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream}
+               else raise('Problem in function Main.RunTurn') end
                end
-               {Delay 2000}
-               {System.show Z}
-               {RunTurn N-1 NbAlive T Z NbTurn+1} % TODO CHANGE NIL
-            else raise('Problem in function Main.RunTurn') end
             end
+            
          end
       end
       BombsL
+      HideFStream
+      HideFPort
    in
       BombPort = {NewPort BombsL}
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1} % TODO : modify nil
+      HideFPort = {NewPort HideFStream}
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream}
    end
+   
 
 in
    %% Implement your controller here
@@ -245,12 +296,12 @@ in
    % Spawn bonuses, boxes and players
    {SpawnMap Input.map PPlayers}
    
-   {Delay 5000} % à modifier
+   {Delay 5000} % TODO : synchronisation entre fichiers
 
    if Input.isTurnByTurn then
       {RunTurnByTurn} % TODO un thread ?
    end
    % TODO : else : RunSimul
 
-
+%% TRES IMPORTANT : rendre les bombes au joueur devrait être fait après le tour d'explosion (ou du moins, après la décision du joueur) je pense. => nouveau port par ex et process le stream après doaction
 end
