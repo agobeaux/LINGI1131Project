@@ -145,7 +145,7 @@ define
             Pos2 = pt(x:X y:Y)
             case {Nth {Nth Input.map Y} X}
             of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
-            [] 3 then {Send PGUI hideBonus(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
+            [] 3 then {Send PGUI hideBonus(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
             [] 1 then false
             else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true
             end

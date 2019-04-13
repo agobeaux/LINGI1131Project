@@ -1,0 +1,37 @@
+[FR] To-do-list (code, pas rapport):
+- Mouvements des joueurs : OK
+- Poser des bombes : OK
+- Faire exploser des bombes : OK
+- Prévenir que la bombe a explosé : OK
+- Récupérer les bombes : +/- : il faut juste changer l'ordre des choses en créant un port pour qu'ils reçoivent les bombes après l'explosion (déjà fait) mais surtout après avoir décidé l'action pendant l'explosion (pour le moment ils peuvent poser en même temps que l'explosion)
+- Prévenir que la boîte BOX a été remove : OK
+- Prévenir que la boîte BONUS a été remove : OK
+- Détruire les boîtes/bonus : OK
+- Ramasser les bonus/points : TODO
+- Update score : TODO
+- Tuer avec les bombes (le feu devrait arrêter de se propager dans ce cas ?) Attention : preprocess les positions des gens pour ne pas double kill : TODO
+- Informer de la mort : TODO
+- Update les vies et respawn (sans double kill possible cf. Moodle) : TODO
+- Informer du respawn : TODO
+- Informer du spawn de départ !! : TODO
+- Afficher le gagnant (et donc options pour finir le jeu : plus de boxes ou strictement moins de 2 bombers) : TODO
+- Créer les bonus basiques (new bomb or 10 points (50/50 possibility): TODO
+ATTENTION : 2 bombes du même joueur ne peuvent pas être sur la même case donc que se passe-t-il : on doit le gérer dans le player quand on en crée un ou alors on doit aussi le gérer dans le Main.oz et remplacer son action par 'ne pas bouger' ?
+
+- Créer un player basique : TODO
+
+- Jeu simultané : adaptation : TODO
+
+- Créer un player plus avancé : TODO
+- Interopérabilité avec player de base et avec players d'autres groupes (5 tests de min 3 groupes différents)
+
+"Optional but somewhat required part" : pas limités à ça mais on peut faire ceci :
+- Créer des bonus spéciaux : TODO
+- Tuner le GUI : TODO
+- Players plus intelligents : TODO
+- Players contrôlables par clavier : TODO
+- Faire une bonne suite de tests pour notre projet : TODO (vraiment important pour prouver qu'il fonctionne bien comme on veut)
+- "Initiate and lead a sharing platform for compiled agents" : C'est ce que Nicolas Van de Walle a fait non ? Pour se partager les players.ozf
+- Autres features/tooling : TODO
+
+TRUC QUE JE TROUVE SYMPA : Dans bomberman ils font des réactions à la suite avec les bombes, il faut implémenter ça aussi dans notre jeu je trouve : TODO
