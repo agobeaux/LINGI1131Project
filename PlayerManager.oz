@@ -16,7 +16,7 @@ in
       %%[] player000name then {Player000name.portPlayer ID}
       else
          raise 
-            unknownedPlayer('Player not recognized by the PlayerManager '#Kind)
+            unknownPlayer('Player not recognized by the PlayerManager '#Kind)
          end
       end
    end

@@ -6,15 +6,20 @@ import
    Browser
    System % System.show
    OS % OS.rand
+export
+   processMove : ProcessMove % c'était pour le test. TODO : remove ?
 define
    PGUI
    PPlayers
+   PScore
+   ScoreStream
    fun {CreatePlayers N Colors Names}
       if N == 0 then nil
       else
          case Colors#Names of (Color|T1)#(Name|T2) then Bomber in
             Bomber = bomber(id:N color:Color name:Name)
             {Send PGUI initPlayer(Bomber)}
+            {Send PScore 0}
             {PlayerManager.playerGenerator player000bomber Bomber}|{CreatePlayers N-1 T1 T2}
          else nil
          end
@@ -88,10 +93,10 @@ define
       proc{SpawnPlayers N PPlayers SpawnList}
          if N == 0 then skip
          else
-            case PPlayers#SpawnList of (Play|T1)#(Spawn|T2) then ID Pos RealID in
-               {Send Play assignSpawn(Spawn)}
-               {Send Play spawn(ID Pos)}
-               {Send Play getId(RealID)}
+            case PPlayers#SpawnList of (PPlay|T1)#(Spawn|T2) then ID Pos RealID in
+               {Send PPlay assignSpawn(Spawn)}
+               {Send PPlay spawn(ID Pos)}
+               {Send PPlay getId(RealID)}
                if {Or ID \= RealID  Pos \= Spawn} then {System.show ID#N} raise('Error, Player spawned at wrong place') end end
                {Send PGUI spawnPlayer(ID Pos)}
                {SpawnPlayers N-1 T1 T2}
@@ -203,6 +208,7 @@ define
             
    
    fun {ProcessBombs BombsList NbTurn HideFPort}
+      {System.show 'inProcessBombs'}
       {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
@@ -223,6 +229,7 @@ define
    
    
    fun {ProcessHideF FireStream}
+      {System.show 'inProcessHideF'}
       if {Not {Value.isDet FireStream}} then
          {System.show 'ProcessHideF not isDet'}
          FireStream
@@ -237,35 +244,132 @@ define
       end
    end
    
+   proc {ProcessBonus PPlay PScore Score}
+      RandomValue
+   in
+      RandomValue = {OS.rand} mod 2
+      case RandomValue
+      of 0 then
+         {Send PPlay add(bomb 1)}
+         {Send PScore Score}
+      [] 1 then ID in
+         {Send PPlay add(point 10)}
+         {Send PScore Score+10}
+         {Send PPlay getId(ID)}
+         {Send PGUI scoreUpdate(ID Score+10)}
+      end
+   end
+
+   fun {ProcessMove PPlay Pos Map Score}
+      fun {BuildNewMap Map X Y}
+         fun {NewRow Row X ThisX}
+            {System.show 'in NewRow'}
+            case Row of H|T then
+               if X == ThisX then 0|T % change into simple floor
+               else H|{NewRow T X ThisX+1}
+               end
+            else raise('Error in NewRow function : Row != H|T') end
+            end
+         end
+         fun {NewColumns Map X Y ThisY}
+            {System.show 'in NewColumns'}
+            case Map of H|T then
+               if ThisY == Y then % column which should change
+                  {NewRow H X 1}|T
+               else H|{NewColumns T X Y ThisY+1}
+               end
+            else raise('Error in NewColumns function : Map != H|T') end
+            end
+         end
+      in
+         % works if 1 < X,Y < N. 1 and N being the borders
+         if {Or X =< 1 {Or Y =< 1 {Or Y >= Input.nbRow X >= Input.nbColumn}}} then
+            raise('Assertion error in ProcessMove function') end
+         end
+         {NewColumns Map X Y 1}
+      end
+   in
+      {System.show 'in ProcessMove function'}
+      % similar solution : construct the map at the same time as checking
+      case Pos of pt(x:X y:Y) then Value in
+         Value = {Nth {Nth Map Y} X}
+         {System.show 'Map : '}
+         {System.show Map}
+         {Wait {Nth {Nth Map Input.nbRow} Input.nbColumn}}
+         {System.show 'Value in ProcessMove function : '}
+         {System.show Value}
+         case Value
+         of 0 then % Simple floor
+            {Send PScore Score}
+            Map
+         [] 1 then raise('Problem, moved into a wall !') end
+         [] 2 then NewMap ID in% box with point
+            {Send PPlay add(point 1)}
+            {Send PScore Score+1}
+            {Send PPlay getId(ID)}
+            {Send PGUI scoreUpdate(ID Score+1)}
+            {Send PGUI hidePoint(Pos)}
+            % make this tile a floor :
+            NewMap = {BuildNewMap Map X Y}
+            {System.show 'case Value == 2, map : '}
+            {System.show NewMap}
+            NewMap
+         [] 3 then Z NewMap in% box with a bonus
+            % TODO : ProcessBonus (and send sth to the player)
+            {Send PGUI hideBonus(Pos)}
+            NewMap = {BuildNewMap Map X Y}
+            {ProcessBonus PPlay PScore Score}
+            {System.show 'case Value == 3, map : '}
+            {System.show NewMap}
+            NewMap
+         [] 4 then % Floor with spawn
+            {Send PScore Score}
+            Map
+         else raise('Problem, map with unknown value') end
+         end
+      else raise('Error in function ProcessMove, wrong Pos pattern') end
+      end
+   end
    
    proc {RunTurnByTurn}
       BombPort
-      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream}
+      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream}
          if NbAlive =< 1 then skip end
-         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream}
+         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream}
          else
             
             local NewBombsList NewHideFireStream in
                NewHideFireStream = {ProcessHideF HideFireStream}
                NewBombsList = {ProcessBombs BombsList NbTurn HideFPort}
-
-               case PPlays of PPlay|T then ID State Action in
+               {System.show 'After NewBombsList'}
+               case PPlays#ScoreStream of (PPlay|T)#(Score|TStream) then ID State Action NewMap in
                   {Send PPlay getState(ID State)}
-                  if State == off then {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream} end
+                  if State == off then % Problem : have to send score to keep ordering
+                     {Send PScore Score}
+                     {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream Map TStream}
+                  end
                   {Send PPlay doaction(_ Action)}
                   case Action
                   of move(Pos) then
+                     {System.show 'move(Pos) : '}
+                     {System.show Pos}
+                     NewMap = {ProcessMove PPlay Pos Map Score}
+                     {System.show 'After NewMap = ProcessMove call'}
                      {Send PGUI movePlayer(ID Pos)}
                      {SendMoveInfo PPlayers movePlayer(ID Pos)}
                   [] bomb(Pos) then
+                     {Send PScore Score} % Score doesn't change
+                     {System.show 'bomb(Pos) : '}
+                     {System.show Pos}
                      {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
                      {SendBombInfo PPlayers bombPlanted(Pos)}
                      {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
+                     NewMap = Map
                   else raise('Unrecognised msg in function Main.RunTurn') end
                   end
                   {Delay 1500}
                   {System.show NewBombsList}
-                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream}
+                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NewMap TStream}
                else raise('Problem in function Main.RunTurn') end
                end
             end
@@ -278,7 +382,7 @@ define
    in
       BombPort = {NewPort BombsL}
       HideFPort = {NewPort HideFStream}
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream}
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream Input.map ScoreStream}
    end
    
 
@@ -291,8 +395,9 @@ in
    
 
    % Create the ports for the players using the PlayerManager and assign its unique ID.
+   PScore = {NewPort ScoreStream}
    PPlayers = {CreatePlayers Input.nbBombers Input.colorsBombers Input.bombers}
-
+   
    % Spawn bonuses, boxes and players
    {SpawnMap Input.map PPlayers}
    
