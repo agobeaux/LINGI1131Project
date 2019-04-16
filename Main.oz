@@ -143,14 +143,14 @@ define
       end
    end
    
-   proc {ExplodeBomb Pos PortPlayer HideFPort} % TODO : add HideF behaviour
-      fun {ProcessExplode X Y}
+   proc {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : add HideF behaviour
+      fun {ProcessExplode X Y} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
          {System.show 'Im in ProcessExplode !!!!!!!!!!!!!'} % TODO : delete
          local Pos2 in
             Pos2 = pt(x:X y:Y)
-            case {Nth {Nth Input.map Y} X}
+            case {Nth {Nth Map Y} X}
             of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
-            [] 3 then {Send PGUI hideBonus(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
+            [] 3 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
             [] 1 then false
             else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true
             end
@@ -207,7 +207,7 @@ define
    end
             
    
-   fun {ProcessBombs BombsList NbTurn HideFPort}
+   fun {ProcessBombs BombsList NbTurn HideFPort Map}
       {System.show 'inProcessBombs'}
       {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
@@ -218,8 +218,8 @@ define
          of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
             {System.show 'in case bomb'} % TODO : delete
             if(Turn == NbTurn) then
-               {ExplodeBomb Pos PortPlayer HideFPort} % TODO : send sur le port
-               {ProcessBombs T NbTurn HideFPort}
+               {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : send sur le port
+               {ProcessBombs T NbTurn HideFPort Map}
             else BombsList end
          [] H|T then raise('Problem in function ProcessBombs case H|T') end
          else raise('Problem in function ProcessBombs else') end
@@ -340,7 +340,7 @@ define
             
             local NewBombsList NewHideFireStream in
                NewHideFireStream = {ProcessHideF HideFireStream}
-               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort}
+               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map} % TODO : IL FAUT CHANGER LA MAP A CE MOMENT AUSSI !!!
                {System.show 'After NewBombsList'}
                case PPlays#ScoreStream of (PPlay|T)#(Score|TStream) then ID State Action NewMap in
                   {Send PPlay getState(ID State)}
@@ -367,7 +367,7 @@ define
                      NewMap = Map
                   else raise('Unrecognised msg in function Main.RunTurn') end
                   end
-                  {Delay 1500}
+                  {Delay 500}
                   {System.show NewBombsList}
                   {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NewMap TStream}
                else raise('Problem in function Main.RunTurn') end

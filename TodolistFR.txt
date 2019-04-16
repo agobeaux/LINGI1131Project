@@ -9,6 +9,7 @@
 - Détruire les boîtes/bonus : OK
 - Ramasser les bonus/points : OK
 - Update score : OK
+- Changement de Map lors de l'explosion plutôt que lors du move ? Le faire pendant le move c'est sympa pour voir s'il y a bien un bonus mais est-ce qu'il ne pourrait pas y avoir un problème si on met plusieurs bombes au même endroit ? il faudrait y réfléchir mais je pense que si : TODO
 - Faire spawn les bonus seulement quand la boîte explose (avant le feu sinon c'est nul) + remettre le feu après le tour des joueurs (processBombs) : TODO
 - Feu sur le spawn de la bombe : TODO
 - Liste des autres bugs que j'ai écrit sur une feuille : TODO à mettre ici : TODO
