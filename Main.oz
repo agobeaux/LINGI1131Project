@@ -143,77 +143,70 @@ define
       end
    end
    
-   /*
-      explodes the bomb (+send spawnFire (not where the bomb is /!\ should TODO) + send hideFire msg in HideFPort)
-      return the new Map
-    */
    fun {ExplodeBomb Pos PortPlayer HideFPort Map}
       % TODO TRES IMPORTANT : quand y'aura des explosions qui se croisent il faudra bien le gérer... On devra changer la map après tout et pas directement après
       % car sinon un feu pourrait aller plus loin qu'une boîte. => stream avec les endroits à mettre en feu
-      fun {ProcessExplode X Y Map NMap ChangeRecord} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
+      fun {ProcessExplode X Y ChangeRecord} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
          {System.show 'Im in ProcessExplode !!!!!!!!!!!!!'} % TODO : delete
          local Pos2 in
             Pos2 = pt(x:X y:Y)
-            NMap = Map % TODO : CHANGE THIS !!! have to call the function to change an element of Map
             case {Nth {Nth Map Y} X}
-            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
-            [] 3 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
-            [] 1 then false
+            of 2 then % point box
+               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
+            [] 3 then % bonus box
+               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
+            [] 1 then false % wall
             else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true % TODO WARNING : attention si on rajoute des éléments le 'else' sera insuffisant...
             end
          end
       end
-      fun {ProcessExplodeXM X Y Dx Map ChangeRecord}
-         if {And Dx =< Input.fire X-Dx>0} then X2 NMap DoNext in
+      proc {ProcessExplodeXM X Y Dx ChangeRecord}
+         if {And Dx =< Input.fire X-Dx>0} then X2 DoNext in
             X2 = X - Dx
-            DoNext = {ProcessExplode X2 Y Map NMap ChangeRecord}
-            if DoNext then {ProcessExplodeXM X Y Dx+1 NMap ChangeRecord}
-            else NMap end
-         else Map end
+            DoNext = {ProcessExplode X2 Y ChangeRecord}
+            if DoNext then {ProcessExplodeXM X Y Dx+1 ChangeRecord} end
+         end
       end
-      fun {ProcessExplodeXP X Y Dx Map ChangeRecord}
-         if {And Dx =< Input.fire X+Dx < Input.nbColumn} then X2 NMap DoNext in
+      proc {ProcessExplodeXP X Y Dx ChangeRecord}
+         if {And Dx =< Input.fire X+Dx < Input.nbColumn} then X2 DoNext in
             X2 = X + Dx
-            DoNext = {ProcessExplode X2 Y Map NMap ChangeRecord}
-            if DoNext then {ProcessExplodeXP X Y Dx+1 NMap ChangeRecord}
-            else NMap end
-         else Map end
+            DoNext = {ProcessExplode X2 Y ChangeRecord}
+            if DoNext then {ProcessExplodeXP X Y Dx+1 ChangeRecord} end
+         end
       end
-      fun {ProcessExplodeYM X Y Dy Map ChangeRecord}
-         if {And Dy =< Input.fire Y-Dy > 0} then Y2 NMap DoNext in
+      proc {ProcessExplodeYM X Y Dy ChangeRecord}
+         if {And Dy =< Input.fire Y-Dy > 0} then Y2 DoNext in
             Y2 = Y - Dy
-            DoNext = {ProcessExplode X Y2 Map NMap ChangeRecord}
-            if DoNext then {ProcessExplodeYM X Y Dy+1 NMap ChangeRecord}
-            else NMap end
-         else Map end
+            DoNext = {ProcessExplode X Y2 ChangeRecord}
+            if DoNext then {ProcessExplodeYM X Y Dy+1 ChangeRecord} end
+         end
       end
-      fun {ProcessExplodeYP X Y Dy Map ChangeRecord}
-         if {And Dy =< Input.fire Y+Dy < Input.nbRow} then Y2 NMap DoNext in
+      proc {ProcessExplodeYP X Y Dy ChangeRecord}
+         if {And Dy =< Input.fire Y+Dy < Input.nbRow} then Y2 DoNext in
             Y2 = Y + Dy
-            DoNext = {ProcessExplode X Y2 Map NMap ChangeRecord}
-            if DoNext then {ProcessExplodeYP X Y Dy+1 NMap ChangeRecord}
-            else NMap end
-         else Map end
+            DoNext = {ProcessExplode X Y2 ChangeRecord}
+            if DoNext then {ProcessExplodeYP X Y Dy+1 ChangeRecord} end
+         end
       end
    in
       {System.show 'Im in ExplodeBomb'} % TODO : delete
       {Send PGUI hideBomb(Pos)}
       {Send PortPlayer add(bomb 1 _)}
       {SendBombExplodedInfo PPlayers bombExploded(Pos)}
-      case Pos of pt(x:X y:Y) then Map1 Map2 Map3 Map4 ChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
-         Map1 = {ProcessExplodeXM X Y 1 Map ChangeRecord1}
+      case Pos of pt(x:X y:Y) then ChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
+         {ProcessExplodeXM X Y 1 ChangeRecord1}
          if {Value.isDet ChangeRecord1} then ChangeList = ChangeRecord1|List2
          else ChangeList = List2 end
 
-         Map2 = {ProcessExplodeXP X Y 1 Map1 ChangeRecord2}
+         {ProcessExplodeXP X Y 1 ChangeRecord2}
          if {Value.isDet ChangeRecord2} then List2 = ChangeRecord2|List3
          else List2 = List3 end
 
-         Map3 = {ProcessExplodeYM X Y 1 Map2 ChangeRecord3}
+         {ProcessExplodeYM X Y 1 ChangeRecord3}
          if {Value.isDet ChangeRecord3} then List3 = ChangeRecord3|List4
          else List3 = List4 end
 
-         Map4 = {ProcessExplodeYP X Y 1 Map3 ChangeRecord4} % returns the new Map
+         {ProcessExplodeYP X Y 1 ChangeRecord4}
          if {Value.isDet ChangeRecord4} then List4 = ChangeRecord4|nil
          else List4 = nil end
 
