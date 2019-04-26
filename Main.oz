@@ -143,84 +143,106 @@ define
       end
    end
    
-   proc {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : add HideF behaviour
-      fun {ProcessExplode X Y} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
+   /*
+      explodes the bomb (+send spawnFire (not where the bomb is /!\ should TODO) + send hideFire msg in HideFPort)
+      return the new Map
+    */
+   fun {ExplodeBomb Pos PortPlayer HideFPort Map}
+      % TODO TRES IMPORTANT : quand y'aura des explosions qui se croisent il faudra bien le gérer... On devra changer la map après tout et pas directement après
+      % car sinon un feu pourrait aller plus loin qu'une boîte. => stream avec les endroits à mettre en feu
+      fun {ProcessExplode X Y Map NMap ChangeRecord} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
          {System.show 'Im in ProcessExplode !!!!!!!!!!!!!'} % TODO : delete
          local Pos2 in
             Pos2 = pt(x:X y:Y)
+            NMap = Map % TODO : CHANGE THIS !!! have to call the function to change an element of Map
             case {Nth {Nth Map Y} X}
-            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
-            [] 3 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} false
+            of 2 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
+            [] 3 then {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
             [] 1 then false
-            else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true
+            else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true % TODO WARNING : attention si on rajoute des éléments le 'else' sera insuffisant...
             end
          end
       end
-      proc {ProcessExplodeXM X Y Dx}
-         if Dx =< Input.fire then X2 in
+      fun {ProcessExplodeXM X Y Dx Map ChangeRecord}
+         if {And Dx =< Input.fire X-Dx>0} then X2 NMap DoNext in
             X2 = X - Dx
-            if X2 > 0 then DoNext in
-               DoNext = {ProcessExplode X2 Y}
-               if DoNext then {ProcessExplodeXM X Y Dx+1} end
-            end
-         end
+            DoNext = {ProcessExplode X2 Y Map NMap ChangeRecord}
+            if DoNext then {ProcessExplodeXM X Y Dx+1 NMap ChangeRecord}
+            else NMap end
+         else Map end
       end
-      proc {ProcessExplodeXP X Y Dx}
-         if Dx =< Input.fire then X2 in
+      fun {ProcessExplodeXP X Y Dx Map ChangeRecord}
+         if {And Dx =< Input.fire X+Dx < Input.nbColumn} then X2 NMap DoNext in
             X2 = X + Dx
-            if X2 < Input.nbColumn then DoNext in
-               DoNext = {ProcessExplode X2 Y}
-               if DoNext then {ProcessExplodeXP X Y Dx+1} end
-            end
-         end
+            DoNext = {ProcessExplode X2 Y Map NMap ChangeRecord}
+            if DoNext then {ProcessExplodeXP X Y Dx+1 NMap ChangeRecord}
+            else NMap end
+         else Map end
       end
-      proc {ProcessExplodeYM X Y Dy}
-         if Dy =< Input.fire then Y2 in
+      fun {ProcessExplodeYM X Y Dy Map ChangeRecord}
+         if {And Dy =< Input.fire Y-Dy > 0} then Y2 NMap DoNext in
             Y2 = Y - Dy
-            if Y2 > 0 then DoNext in
-               DoNext = {ProcessExplode X Y2}
-               if DoNext then {ProcessExplodeYM X Y Dy+1} end
-            end
-         end
+            DoNext = {ProcessExplode X Y2 Map NMap ChangeRecord}
+            if DoNext then {ProcessExplodeYM X Y Dy+1 NMap ChangeRecord}
+            else NMap end
+         else Map end
       end
-      proc {ProcessExplodeYP X Y Dy}
-         if Dy =< Input.fire then Y2 in
+      fun {ProcessExplodeYP X Y Dy Map ChangeRecord}
+         if {And Dy =< Input.fire Y+Dy < Input.nbRow} then Y2 NMap DoNext in
             Y2 = Y + Dy
-            if Y2 < Input.nbRow then DoNext in
-               DoNext = {ProcessExplode X Y2}
-               if DoNext then {ProcessExplodeYP X Y Dy+1} end
-            end
-         end
+            DoNext = {ProcessExplode X Y2 Map NMap ChangeRecord}
+            if DoNext then {ProcessExplodeYP X Y Dy+1 NMap ChangeRecord}
+            else NMap end
+         else Map end
       end
    in
       {System.show 'Im in ExplodeBomb'} % TODO : delete
       {Send PGUI hideBomb(Pos)}
       {Send PortPlayer add(bomb 1 _)}
       {SendBombExplodedInfo PPlayers bombExploded(Pos)}
-      case Pos of pt(x:X y:Y) then
-         {ProcessExplodeXM X Y 1}
-         {ProcessExplodeXP X Y 1}
-         {ProcessExplodeYM X Y 1}
-         {ProcessExplodeYP X Y 1}
+      case Pos of pt(x:X y:Y) then Map1 Map2 Map3 Map4 ChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
+         Map1 = {ProcessExplodeXM X Y 1 Map ChangeRecord1}
+         if {Value.isDet ChangeRecord1} then ChangeList = ChangeRecord1|List2
+         else ChangeList = List2 end
+
+         Map2 = {ProcessExplodeXP X Y 1 Map1 ChangeRecord2}
+         if {Value.isDet ChangeRecord2} then List2 = ChangeRecord2|List3
+         else List2 = List3 end
+
+         Map3 = {ProcessExplodeYM X Y 1 Map2 ChangeRecord3}
+         if {Value.isDet ChangeRecord3} then List3 = ChangeRecord3|List4
+         else List3 = List4 end
+
+         Map4 = {ProcessExplodeYP X Y 1 Map3 ChangeRecord4} % returns the new Map
+         if {Value.isDet ChangeRecord4} then List4 = ChangeRecord4|nil
+         else List4 = nil end
+
+         {BuildNewMapList Map ChangeList} % returns new Map : TODO WARNING : il faut renvoyer la liste et non la Map car si on a plusieurs bombes
+         % on ne veut pas que ça aille plus loin qu'une boîte en un tour (imaginer 2 bombes qui veulent détruire la même boîte au même moment)
+
       else raise('Problem in function ExplodeBomb') end
       end
    end
             
    
-   fun {ProcessBombs BombsList NbTurn HideFPort Map}
+   fun {ProcessBombs BombsList NbTurn HideFPort Map NewMap}
       {System.show 'inProcessBombs'}
       {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
+         NewMap = Map
          BombsList
       else
          case BombsList
          of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
             {System.show 'in case bomb'} % TODO : delete
-            if(Turn == NbTurn) then
-               {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : send sur le port
-               {ProcessBombs T NbTurn HideFPort Map}
-            else BombsList end
+            if(Turn == NbTurn) then NMap in
+               NMap = {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : send sur le port
+               {ProcessBombs T NbTurn HideFPort NMap NewMap}
+            else
+               NewMap = Map
+               BombsList
+            end
          [] H|T then raise('Problem in function ProcessBombs case H|T') end
          else raise('Problem in function ProcessBombs else') end
          end
@@ -260,35 +282,45 @@ define
       end
    end
 
-   fun {ProcessMove PPlay Pos Map Score}
-      fun {BuildNewMap Map X Y}
-         fun {NewRow Row X ThisX}
-            {System.show 'in NewRow'}
-            case Row of H|T then
-               if X == ThisX then 0|T % change into simple floor
-               else H|{NewRow T X ThisX+1}
-               end
-            else raise('Error in NewRow function : Row != H|T') end
+   % TODO : en simultané, ils pourront être en même temps sur une case BONUS : à gérer : +le total pour chacun ? + la moitié ? Random give ? give au premier dans notre liste (unfair) ?
+
+   fun {BuildNewMapList Map List}
+      case List
+      of (X#Y#Value)|T then {BuildNewMapList {BuildNewMap Map X Y Value} T}
+      [] nil then Map
+      else raise('Error in BuildNewMapList : list pattern not recognized') end
+      end
+   end
+
+   fun {BuildNewMap Map X Y Value}
+      fun {NewRow Row X ThisX}
+         {System.show 'in NewRow'}
+         case Row of H|T then
+            if X == ThisX then Value|T % change into Value given
+            else H|{NewRow T X ThisX+1}
             end
+         else raise('Error in NewRow function : Row != H|T') end
          end
-         fun {NewColumns Map X Y ThisY}
-            {System.show 'in NewColumns'}
-            case Map of H|T then
-               if ThisY == Y then % column which should change
-                  {NewRow H X 1}|T
-               else H|{NewColumns T X Y ThisY+1}
-               end
-            else raise('Error in NewColumns function : Map != H|T') end
+      end
+      fun {NewColumns Map X Y ThisY}
+         {System.show 'in NewColumns'}
+         case Map of H|T then
+            if ThisY == Y then % column which should change
+               {NewRow H X 1}|T
+            else H|{NewColumns T X Y ThisY+1}
             end
+         else raise('Error in NewColumns function : Map != H|T') end
          end
-      in
-         % works if 1 < X,Y < N. 1 and N being the borders
-         if {Or X =< 1 {Or Y =< 1 {Or Y >= Input.nbRow X >= Input.nbColumn}}} then
-            raise('Assertion error in ProcessMove function') end
-         end
-         {NewColumns Map X Y 1}
       end
    in
+      % works if 1 < X,Y < N. 1 and N being the borders
+      if {Or X =< 1 {Or Y =< 1 {Or Y >= Input.nbRow X >= Input.nbColumn}}} then
+         raise('Assertion error in BuildNewMap function') end
+      end
+      {NewColumns Map X Y 1}
+   end
+
+   fun {ProcessMove PPlay Pos Map Score}
       {System.show 'in ProcessMove function'}
       % similar solution : construct the map at the same time as checking
       case Pos of pt(x:X y:Y) then Value in
@@ -302,30 +334,32 @@ define
          of 0 then % Simple floor
             {Send PScore Score}
             Map
-         [] 1 then raise('Problem, moved into a wall !') end
-         [] 2 then NewMap ID in% box with point
+         [] 1 then raise('Problem in ProcessMove function, moved into a wall !') end
+         [] 2 then raise('Problem in ProcessMove function, moved into a point box !') end
+         [] 3 then raise('Problem in ProcessMove function, moved into a bonus box !') end
+         [] 4 then % Floor with spawn
+            {Send PScore Score}
+            Map
+         [] 5 then NewMap ID in % point
             {Send PPlay add(point 1)}
             {Send PScore Score+1}
             {Send PPlay getId(ID)}
             {Send PGUI scoreUpdate(ID Score+1)}
             {Send PGUI hidePoint(Pos)}
             % make this tile a floor :
-            NewMap = {BuildNewMap Map X Y}
-            {System.show 'case Value == 2, map : '}
+            NewMap = {BuildNewMap Map X Y 0} % change tile into simple floor
+            {System.show 'ProcessMove : case Value == 5, map : '}
             {System.show NewMap}
             NewMap
-         [] 3 then Z NewMap in% box with a bonus
+         [] 6 then Z NewMap in % bonus
             % TODO : ProcessBonus (and send sth to the player)
             {Send PGUI hideBonus(Pos)}
-            NewMap = {BuildNewMap Map X Y}
+            NewMap = {BuildNewMap Map X Y 0} % change tile into simple floor
             {ProcessBonus PPlay PScore Score}
-            {System.show 'case Value == 3, map : '}
+            {System.show 'ProcessMove : case Value == 6, map : '}
             {System.show NewMap}
             NewMap
-         [] 4 then % Floor with spawn
-            {Send PScore Score}
-            Map
-         else raise('Problem, map with unknown value') end
+         else raise('Problem in ProcessMove function, map with unknown value') end
          end
       else raise('Error in function ProcessMove, wrong Pos pattern') end
       end
@@ -338,22 +372,22 @@ define
          if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream}
          else
             
-            local NewBombsList NewHideFireStream in
+            local NewBombsList NewHideFireStream NMapProcessBombs in
                NewHideFireStream = {ProcessHideF HideFireStream}
-               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map} % TODO : IL FAUT CHANGER LA MAP A CE MOMENT AUSSI !!!
+               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs}
                {System.show 'After NewBombsList'}
                case PPlays#ScoreStream of (PPlay|T)#(Score|TStream) then ID State Action NewMap in
                   {Send PPlay getState(ID State)}
                   if State == off then % Problem : have to send score to keep ordering
                      {Send PScore Score}
-                     {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream Map TStream}
+                     {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
                   end
                   {Send PPlay doaction(_ Action)}
                   case Action
                   of move(Pos) then
                      {System.show 'move(Pos) : '}
                      {System.show Pos}
-                     NewMap = {ProcessMove PPlay Pos Map Score}
+                     NewMap = {ProcessMove PPlay Pos NMapProcessBombs Score}
                      {System.show 'After NewMap = ProcessMove call'}
                      {Send PGUI movePlayer(ID Pos)}
                      {SendMoveInfo PPlayers movePlayer(ID Pos)}
@@ -364,7 +398,7 @@ define
                      {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
                      {SendBombInfo PPlayers bombPlanted(Pos)}
                      {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
-                     NewMap = Map
+                     NewMap = NMapProcessBombs
                   else raise('Unrecognised msg in function Main.RunTurn') end
                   end
                   {Delay 500}
