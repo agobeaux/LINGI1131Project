@@ -9,9 +9,9 @@
 - Détruire les boîtes/bonus : OK
 - Ramasser les bonus/points : OK
 - Update score : OK
-- Changement de Map : à faire après avoir process toutes les bombes : TODO
+- Changement de Map : à faire après avoir process toutes les bombes du même tour : OK
 - Faire spawn les bonus seulement quand la boîte explose (avant le feu sinon c'est nul) + remettre le feu après le tour des joueurs (processBombs) : TODO
-- Feu sur le spawn de la bombe : TODO
+- Feu sur le spawn de la bombe : OK
 - Liste des autres bugs que j'ai écrit sur une feuille : TODO à mettre ici : TODO
 - Tuer avec les bombes (le feu devrait arrêter de se propager dans ce cas ?) Attention : preprocess les positions des gens pour ne pas double kill : TODO
 - Informer de la mort : TODO
@@ -19,7 +19,7 @@
 - Informer du respawn : TODO
 - Informer du spawn de départ !! : TODO
 - Afficher le gagnant (et donc options pour finir le jeu : plus de boxes ou strictement moins de 2 bombers) : TODO
-- Créer les bonus basiques (new bomb or 10 points (50/50 possibility): TODO
+- Créer les bonus basiques (new bomb or 10 points (50/50 possibility): OK
 - synchro début GUI et début main, pas mis sur la feuille mais important ^^' : TODO
 ATTENTION : 2 bombes du même joueur ne peuvent pas être sur la même case donc que se passe-t-il : on doit le gérer dans le player quand on en crée un ou alors on doit aussi le gérer dans le Main.oz et remplacer son action par 'ne pas bouger' ?
 

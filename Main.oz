@@ -143,7 +143,7 @@ define
       end
    end
    
-   fun {ExplodeBomb Pos PortPlayer HideFPort Map}
+   fun {ExplodeBomb Pos PortPlayer HideFPort Map LastEndChangeList}
       % TODO TRES IMPORTANT : quand y'aura des explosions qui se croisent il faudra bien le gérer... On devra changer la map après tout et pas directement après
       % car sinon un feu pourrait aller plus loin qu'une boîte. => stream avec les endroits à mettre en feu
       fun {ProcessExplode X Y ChangeRecord} % TODO : WARNING : simultaneous il faudra le même map pour tous les joueurs
@@ -193,13 +193,13 @@ define
       {Send PGUI hideBomb(Pos)}
       {Send PortPlayer add(bomb 1 _)}
       {SendBombExplodedInfo PPlayers bombExploded(Pos)}
-      case Pos of pt(x:X y:Y) then ChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
+      case Pos of pt(x:X y:Y) then NewEndChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
          {Send PGUI spawnFire(Pos)} % Fire where bomb explodes
          {Send HideFPort hideFire(Pos)} % Make it disappear during the next turn
 
          {ProcessExplodeXM X Y 1 ChangeRecord1}
-         if {Value.isDet ChangeRecord1} then ChangeList = ChangeRecord1|List2
-         else ChangeList = List2 end
+         if {Value.isDet ChangeRecord1} then LastEndChangeList = ChangeRecord1|List2
+         else LastEndChangeList = List2 end
 
          {ProcessExplodeXP X Y 1 ChangeRecord2}
          if {Value.isDet ChangeRecord2} then List2 = ChangeRecord2|List3
@@ -210,33 +210,47 @@ define
          else List3 = List4 end
 
          {ProcessExplodeYP X Y 1 ChangeRecord4}
-         if {Value.isDet ChangeRecord4} then List4 = ChangeRecord4|nil
-         else List4 = nil end
+         if {Value.isDet ChangeRecord4} then List4 = ChangeRecord4|NewEndChangeList
+         else List4 = NewEndChangeList end
 
-         {BuildNewMapList Map ChangeList} % returns new Map : TODO WARNING : il faut renvoyer la liste et non la Map car si on a plusieurs bombes
-         % on ne veut pas que ça aille plus loin qu'une boîte en un tour (imaginer 2 bombes qui veulent détruire la même boîte au même moment)
+         thread {System.show 'LastEndChangeList'#LastEndChangeList} end
+         thread {System.show 'NewEndChangeList'#NewEndChangeList} end
+
+         NewEndChangeList % returns the new unbound end of ChangeList so that we can append lists of changes from other
+         % bombs exploding during the same turn (debugs border case when 2 bombs want to explode the same box : fire doesn't go further for any of the bombs)
 
       else raise('Problem in function ExplodeBomb') end
       end
    end
             
    
-   fun {ProcessBombs BombsList NbTurn HideFPort Map NewMap}
+   fun {ProcessBombs BombsList NbTurn HideFPort Map NewMap ChangeList EndChangeList}
       {System.show 'inProcessBombs'}
       {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
-         NewMap = Map
+         EndChangeList = nil % finally ends the list
+         thread {System.show 'ChangeList'#ChangeList} end
+         NewMap = {BuildNewMapList Map ChangeList}
+         {System.show 'NewMap built in ProcessBombs not isDet'}
          BombsList
       else
          case BombsList
          of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
-            {System.show 'in case bomb'} % TODO : delete
-            if(Turn == NbTurn) then NMap in
-               NMap = {ExplodeBomb Pos PortPlayer HideFPort Map} % TODO : send sur le port
-               {ProcessBombs T NbTurn HideFPort NMap NewMap}
+            {System.show 'in case bomb ProcessBombs'} % TODO : delete
+            thread
+               {System.show 'checking if ChangeList == EndChangeList :'}
+               {System.show ChangeList==EndChangeList}
+            end
+            if(Turn == NbTurn) then NewEnd in
+               {System.show 'in if ProcessBombs'}
+               NewEnd = {ExplodeBomb Pos PortPlayer HideFPort Map EndChangeList}
+               thread {System.show 'ChangeList # EndChangeList # NewEnd'#ChangeList#EndChangeList#NewEnd} end
+               {ProcessBombs T NbTurn HideFPort Map NewMap ChangeList NewEnd}
             else
-               NewMap = Map
+               {System.show 'in else ProcessBombs'}
+               EndChangeList = nil % finally ends the list
+               NewMap = {BuildNewMapList Map ChangeList}
                BombsList
             end
          [] H|T then raise('Problem in function ProcessBombs case H|T') end
@@ -281,9 +295,10 @@ define
    % TODO : en simultané, ils pourront être en même temps sur une case BONUS : à gérer : +le total pour chacun ? + la moitié ? Random give ? give au premier dans notre liste (unfair) ?
 
    fun {BuildNewMapList Map List}
+      if {Value.isFree List} then {System.show 'UNBOUND LIST !!! BuildNewMapList'} end % TODO : delete
       case List
       of (X#Y#Value)|T then {BuildNewMapList {BuildNewMap Map X Y Value} T}
-      [] nil then Map
+      [] nil then {System.show 'Leaving BuildNewMapList'} Map % TODO : delete show
       else raise('Error in BuildNewMapList : list pattern not recognized') end
       end
    end
@@ -373,34 +388,35 @@ define
                {System.show 'After NewBombsList'}
                case PPlays#ScoreStream of (PPlay|T)#(Score|TStream) then ID State Action NewMap in
                   {Send PPlay getState(ID State)}
-                  if State == off then % Problem : have to send score to keep ordering
+                  if State == off then ChangeList in % Problem : have to send score to keep ordering
                      {Send PScore Score}
-                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs}
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs ChangeList ChangeList} % check function to understand the 2x ChangeList
                      {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
+                  else ChangeList in
+                     {Send PPlay doaction(_ Action)}
+                     case Action
+                     of move(Pos) then
+                        {System.show 'move(Pos) : '}
+                        {System.show Pos}
+                        NewMap = {ProcessMove PPlay Pos Map Score}
+                        {System.show 'After NewMap = ProcessMove call'}
+                        {Send PGUI movePlayer(ID Pos)}
+                        {SendMoveInfo PPlayers movePlayer(ID Pos)}
+                     [] bomb(Pos) then
+                        {Send PScore Score} % Score doesn't change
+                        {System.show 'bomb(Pos) : '}
+                        {System.show Pos}
+                        {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
+                        {SendBombInfo PPlayers bombPlanted(Pos)}
+                        {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
+                        NewMap = Map
+                     else raise('Unrecognised msg in function Main.RunTurn') end
+                     end
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs ChangeList ChangeList}
+                     {Delay 300}
+                     {System.show NewBombsList}
+                     {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
                   end
-                  {Send PPlay doaction(_ Action)}
-                  case Action
-                  of move(Pos) then
-                     {System.show 'move(Pos) : '}
-                     {System.show Pos}
-                     NewMap = {ProcessMove PPlay Pos Map Score}
-                     {System.show 'After NewMap = ProcessMove call'}
-                     {Send PGUI movePlayer(ID Pos)}
-                     {SendMoveInfo PPlayers movePlayer(ID Pos)}
-                  [] bomb(Pos) then
-                     {Send PScore Score} % Score doesn't change
-                     {System.show 'bomb(Pos) : '}
-                     {System.show Pos}
-                     {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
-                     {SendBombInfo PPlayers bombPlanted(Pos)}
-                     {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
-                     NewMap = Map
-                  else raise('Unrecognised msg in function Main.RunTurn') end
-                  end
-                  NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs}
-                  {Delay 300}
-                  {System.show NewBombsList}
-                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
                else raise('Problem in function Main.RunTurn') end
                end
             end
