@@ -3,14 +3,14 @@
 - Poser des bombes : OK
 - Faire exploser des bombes : OK
 - Prévenir que la bombe a explosé : OK
-- Récupérer les bombes : OK (après que l'action ait été choisie donc nickel)
+- Récupérer les bombes : OK (après que l'action ait été effectuée donc nickel)
 - Prévenir que la boîte BOX a été remove : OK
 - Prévenir que la boîte BONUS a été remove : OK
 - Détruire les boîtes/bonus : OK
 - Ramasser les bonus/points : OK
 - Update score : OK
 - Changement de Map : à faire après avoir process toutes les bombes du même tour : OK
-- Faire spawn les bonus seulement quand la boîte explose (avant le feu sinon c'est nul) + remettre le feu après le tour des joueurs (processBombs) : TODO
+- Faire spawn les bonus seulement quand la boîte explose (avant le feu sinon c'est nul) : OK
 - Feu sur le spawn de la bombe : OK
 - Liste des autres bugs que j'ai écrit sur une feuille : TODO à mettre ici : TODO
 - Tuer avec les bombes (le feu devrait arrêter de se propager dans ce cas ?) Attention : preprocess les positions des gens pour ne pas double kill : TODO

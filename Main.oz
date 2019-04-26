@@ -67,9 +67,10 @@ define
       
       fun {ProcessElt IdSquare X Y}
          case IdSquare
-         of 2 then {Send PGUI spawnPoint(pt(x:X y:Y))} nil
-         [] 3 then {Send PGUI spawnBonus(pt(x:X y:Y))} nil
-         [] 4 then pt(x:X y:Y)|nil 
+         of 4 then pt(x:X y:Y)|nil % spawn
+         % other cases not needed since points and bonuses should spawn only when boxes get destroyed
+         %[] 2 then {Send PGUI spawnPoint(pt(x:X y:Y))} nil
+         %[] 3 then {Send PGUI spawnBonus(pt(x:X y:Y))} nil
          else nil end % wall / empty : rien à faire
       end
       fun {SpawnRow Row X Y}
@@ -152,9 +153,9 @@ define
             Pos2 = pt(x:X y:Y)
             case {Nth {Nth Map Y} X}
             of 2 then % point box
-               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnPoint(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
             [] 3 then % bonus box
-               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnBonus(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
             [] 1 then false % wall
             else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true % TODO WARNING : attention si on rajoute des éléments le 'else' sera insuffisant...
             end
