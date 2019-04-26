@@ -3,13 +3,13 @@
 - Poser des bombes : OK
 - Faire exploser des bombes : OK
 - Prévenir que la bombe a explosé : OK
-- Récupérer les bombes : +/- : il faut juste changer l'ordre des choses en créant un port pour qu'ils reçoivent les bombes après l'explosion (déjà fait) mais surtout après avoir décidé l'action pendant l'explosion (pour le moment ils peuvent poser en même temps que l'explosion)
+- Récupérer les bombes : OK (après que l'action ait été choisie donc nickel)
 - Prévenir que la boîte BOX a été remove : OK
 - Prévenir que la boîte BONUS a été remove : OK
 - Détruire les boîtes/bonus : OK
 - Ramasser les bonus/points : OK
 - Update score : OK
-- Changement de Map lors de l'explosion plutôt que lors du move ? Le faire pendant le move c'est sympa pour voir s'il y a bien un bonus mais est-ce qu'il ne pourrait pas y avoir un problème si on met plusieurs bombes au même endroit ? il faudrait y réfléchir mais je pense que si : TODO
+- Changement de Map : à faire après avoir process toutes les bombes : TODO
 - Faire spawn les bonus seulement quand la boîte explose (avant le feu sinon c'est nul) + remettre le feu après le tour des joueurs (processBombs) : TODO
 - Feu sur le spawn de la bombe : TODO
 - Liste des autres bugs que j'ai écrit sur une feuille : TODO à mettre ici : TODO

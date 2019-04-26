@@ -194,6 +194,9 @@ define
       {Send PortPlayer add(bomb 1 _)}
       {SendBombExplodedInfo PPlayers bombExploded(Pos)}
       case Pos of pt(x:X y:Y) then ChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
+         {Send PGUI spawnFire(Pos)} % Fire where bomb explodes
+         {Send HideFPort hideFire(Pos)} % Make it disappear during the next turn
+
          {ProcessExplodeXM X Y 1 ChangeRecord1}
          if {Value.isDet ChangeRecord1} then ChangeList = ChangeRecord1|List2
          else ChangeList = List2 end
@@ -367,12 +370,12 @@ define
             
             local NewBombsList NewHideFireStream NMapProcessBombs in
                NewHideFireStream = {ProcessHideF HideFireStream}
-               NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs}
                {System.show 'After NewBombsList'}
                case PPlays#ScoreStream of (PPlay|T)#(Score|TStream) then ID State Action NewMap in
                   {Send PPlay getState(ID State)}
                   if State == off then % Problem : have to send score to keep ordering
                      {Send PScore Score}
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs}
                      {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
                   end
                   {Send PPlay doaction(_ Action)}
@@ -380,7 +383,7 @@ define
                   of move(Pos) then
                      {System.show 'move(Pos) : '}
                      {System.show Pos}
-                     NewMap = {ProcessMove PPlay Pos NMapProcessBombs Score}
+                     NewMap = {ProcessMove PPlay Pos Map Score}
                      {System.show 'After NewMap = ProcessMove call'}
                      {Send PGUI movePlayer(ID Pos)}
                      {SendMoveInfo PPlayers movePlayer(ID Pos)}
@@ -391,12 +394,13 @@ define
                      {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
                      {SendBombInfo PPlayers bombPlanted(Pos)}
                      {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
-                     NewMap = NMapProcessBombs
+                     NewMap = Map
                   else raise('Unrecognised msg in function Main.RunTurn') end
                   end
-                  {Delay 500}
+                  NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs}
+                  {Delay 300}
                   {System.show NewBombsList}
-                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NewMap TStream}
+                  {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream}
                else raise('Problem in function Main.RunTurn') end
                end
             end
