@@ -1,7 +1,8 @@
 # ----------------------------
 # group nb XXX
 # 42191600 : Alexandre Gobeaux
-# noma2 : Gilles Peiffer
+# 24321600 : Gilles Peiffer
+#
 # ----------------------------
 
 all :
