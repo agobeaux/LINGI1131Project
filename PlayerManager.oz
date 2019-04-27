@@ -2,7 +2,7 @@ functor
 import
    Player000bomber
    %% Add here the name of the functor of a player
-   %% Player000name
+   KimKardashian
 export
    playerGenerator:PlayerGenerator
 define
@@ -13,7 +13,7 @@ in
       of player000bomber then {Player000bomber.portPlayer ID}
       %% Add here the pattern to recognize the name used in the 
       %% input file and launch the portPlayer function from the functor
-      %%[] player000name then {Player000name.portPlayer ID}
+      [] kimkardashian then {KimKardashian.portPlayer ID}
       else
          raise 
             unknownPlayer('Player not recognized by the PlayerManager '#Kind)

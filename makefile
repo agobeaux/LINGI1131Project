@@ -14,28 +14,30 @@ C = ozc -c
 X = ozengine
 endif
 
-all :
+PLAYERS = KimKardashian.oz
+
+all:
 	make compileAll
 	make run
 
-compileAll :
+compileAll:
 	@$(C) Input.oz
 	make compile
 
-compile :
+compile:
 	@$(C) PlayerManager.oz
-	@$(C) Player*.oz
+	make compilePlayers
 	@$(C) GUI.oz
 	@$(C) Main.oz
 
-compilePlayers : # compiles PlayerManager.oz too... can still use grep
-	@$(C) Player*.oz
+compilePlayers:
+	@$(C) $(PLAYERS)
 
-*.ozf :
+*.ozf:
 	@$(C) *.oz
 
-run :
+run:
 	@$(X) Main.ozf
 
-clean : # Delete every file except .ozf for which we don't have .oz files
+clean: # Delete every file except .ozf for which we don't have .oz files
 	ls *.ozf | grep -v Player000bomber.ozf | grep -v Projet2019util.ozf | xargs rm
