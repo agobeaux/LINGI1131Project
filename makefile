@@ -5,28 +5,37 @@
 #
 # ----------------------------
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Darwin)
+C = /Applications/Mozart2.app/Contents/Resources/bin/ozc -c
+X = /Applications/Mozart2.app/Contents/Resources/bin/ozengine
+else
+C = ozc -c
+X = ozengine
+endif
+
 all :
 	make compileAll
 	make run
 
 compileAll :
-	ozc -c Input.oz
+	@$(C) Input.oz
 	make compile
 
 compile :
-	ozc -c PlayerManager.oz
-	ozc -c Player*.oz
-	ozc -c GUI.oz
-	ozc -c Main.oz
+	@$(C) PlayerManager.oz
+	@$(C) Player*.oz
+	@$(C) GUI.oz
+	@$(C) Main.oz
 
 compilePlayers : # compiles PlayerManager.oz too... can still use grep
-	ozc -c Player*.oz
+	@$(C) Player*.oz
 
 *.ozf :
-	ozc -c *.oz
+	@$(C) *.oz
 
 run :
-	ozengine Main.ozf
+	@$(X) Main.ozf
 
 clean : # Delete every file except .ozf for which we don't have .oz files
 	ls *.ozf | grep -v Player000bomber.ozf | grep -v Projet2019util.ozf | xargs rm
