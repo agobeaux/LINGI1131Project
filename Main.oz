@@ -110,37 +110,13 @@ define
       
    end
 
-   proc {SendMoveInfo PPlayersList Info}
-      case PPlayersList of PortP|T then ID in
-         Info = movePlayer(ID _)
-         if ID \= ID.id then {Send PortP info(Info)} end
-         {SendMoveInfo T Info}
-      [] nil then skip
-      else raise('Error in SendMoveInfo') end
-      end
-   end
-   proc {SendBombInfo PPlayersList Info}
-      case PPlayersList of PortP|T then 
-         {Send PortP info(Info)} % TODO : renvoie à celui qui a posé la bombe => à corriger
-         {SendBombInfo T Info}
-      [] nil then skip
-      else raise('Error in SendBombInfo') end
-      end
-   end
-   proc {SendBoxInfo PPlayersList Info}
+   
+   proc {BroadcastInfo PPlayersList Info}
       case PPlayersList of PortP|T then 
          {Send PortP info(Info)}
-         {SendBoxInfo T Info}
+         {BroadcastInfo T Info}
       [] nil then skip
-      else raise('Error in SendBoxInfo') end
-      end
-   end
-   proc {SendBombExplodedInfo PPlayersList Info}
-      case PPlayersList of PortP|T then 
-         {Send PortP info(Info)}
-         {SendBombExplodedInfo T Info}
-      [] nil then skip
-      else raise('Error in SendBombExplodedInfo') end
+      else raise('Error in BroadcastInfo for msg :'#Info) end
       end
    end
    
@@ -153,9 +129,9 @@ define
             Pos2 = pt(x:X y:Y)
             case {Nth {Nth Map Y} X}
             of 2 then % point box
-               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnPoint(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)} {BroadcastInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnPoint(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
             [] 3 then % bonus box
-               {Send PGUI hideBox(Pos2)} {SendBoxInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnBonus(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)} {BroadcastInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnBonus(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
             [] 1 then false % wall
             else {Send PGUI spawnFire(Pos2)} {Send HideFPort hideFire(Pos2)} true % TODO WARNING : attention si on rajoute des éléments le 'else' sera insuffisant...
             end
@@ -193,7 +169,7 @@ define
       {System.show 'Im in ExplodeBomb'} % TODO : delete
       {Send PGUI hideBomb(Pos)}
       {Send PortPlayer add(bomb 1 _)}
-      {SendBombExplodedInfo PPlayers bombExploded(Pos)}
+      {BroadcastInfo PPlayers bombExploded(Pos)}
       case Pos of pt(x:X y:Y) then NewEndChangeList List2 List3 List4 ChangeRecord1 ChangeRecord2 ChangeRecord3 ChangeRecord4 in
          {Send PGUI spawnFire(Pos)} % Fire where bomb explodes
          {Send HideFPort hideFire(Pos)} % Make it disappear during the next turn
@@ -402,13 +378,13 @@ define
                         NewMap = {ProcessMove PPlay Pos Map Score}
                         {System.show 'After NewMap = ProcessMove call'}
                         {Send PGUI movePlayer(ID Pos)}
-                        {SendMoveInfo PPlayers movePlayer(ID Pos)}
+                        {BroadcastInfo PPlayers movePlayer(ID Pos)}
                      [] bomb(Pos) then
                         {Send PScore Score} % Score doesn't change
                         {System.show 'bomb(Pos) : '}
                         {System.show Pos}
                         {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
-                        {SendBombInfo PPlayers bombPlanted(Pos)}
+                        {BroadcastInfo PPlayers bombPlanted(Pos)}
                         {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
                         NewMap = Map
                      else raise('Unrecognised msg in function Main.RunTurn') end
