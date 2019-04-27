@@ -1,5 +1,5 @@
 # ----------------------------
-# group nb XXX
+# group nb 1
 # 42191600 : Alexandre Gobeaux
 # 24321600 : Gilles Peiffer
 #
