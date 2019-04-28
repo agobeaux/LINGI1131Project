@@ -63,7 +63,7 @@ define
       
    end
    */
-   proc {SpawnMap Map PPlayers}
+   fun {SpawnMap Map PPlayers}
       
       fun {ProcessElt IdSquare X Y}
          case IdSquare
@@ -91,17 +91,17 @@ define
          end
       end
       Spawns
-      proc {SpawnPlayers N PPlayers SpawnList}
-         if N == 0 then skip
+      fun {SpawnPlayers N PPlays SpawnList}
+         if N == 0 then nil
          else
-            case PPlayers#SpawnList of (PPlay|T1)#(Spawn|T2) then ID Pos RealID in
+            case PPlays#SpawnList of (PPlay|T1)#(Spawn|T2) then ID Pos RealID in
                {Send PPlay assignSpawn(Spawn)}
                {Send PPlay spawn(ID Pos)}
                {Send PPlay getId(RealID)}
                if {Or ID \= RealID  Pos \= Spawn} then {System.show ID#N} raise('Error, Player spawned at wrong place') end end
                {Send PGUI spawnPlayer(ID Pos)}
-               {Send PPosPlayers PPlay#Pos}
-               {SpawnPlayers N-1 T1 T2}
+               {BroadcastInfo PPlayers spawnPlayer(ID Pos)}
+               (PPlay#Pos)|{SpawnPlayers N-1 T1 T2}
             end
          end
       end
@@ -112,7 +112,7 @@ define
    end
 
    
-   proc {BroadcastInfo PPlayersList Info}
+   proc {BroadcastInfo PPlayersList Info} % TODO WARNING : Il faudrait check le state d'abord en fait... Si les joueurs peuvent ne plus répondre... Mais osef s'ils répondent pas je pense pour le broadcast
       case PPlayersList of PortP|T then 
          {Send PortP info(Info)}
          {BroadcastInfo T Info}
@@ -121,24 +121,75 @@ define
       end
    end
    
+   fun {ChangePlayersLivesList LivesList ListIDLife ?EndListIDLife PosList ?NewPosList} % TODO WARNING : si on change l'ordering de 1->N plutôt que N->1, il faut changer ici aussi
+      fun {ChangePlayersLives LivesList Elem N PosList ?NewPosList} % TODO WARNING : intéressant à faire : avec un getID par exemple
+         if N == 0 then
+            raise('Error in ChangePlayersLives function : N==0, did not find player') end
+         else
+            case Elem|LivesList|PosList
+            of (IDElem#NbLives)|(Lives|TLivesList)|((PPlay#LastPos)|TPortPos) then ID in
+               {Send PPlay getId(ID)}
+               if IDElem == ID then Pos in
+                  {Send PPlay spawn(_ Pos)}
+                  {Send PGUI spawnPlayer(ID Pos)}
+                  NewPosList = (PPlay#Pos)|TPortPos
+                  {BroadcastInfo PPlayers spawnPlayer(ID Pos)}
+                  NbLives|TLivesList
+               else
+                  local TNewPosList in
+                     NewPosList = (PPlay#LastPos)|TNewPosList
+                     Lives|{ChangePlayersLives TLivesList Elem N-1 TPortPos TNewPosList}
+                  end
+               end
+            else raise('Error in ChangePlayersLives function : pattern not recognized'#Elem|LivesList) end
+            end
+         end
+      end
+   in
+      if {Not {Value.isDet ListIDLife}} then
+         {System.show 'Value not det'}
+         NewPosList = PosList
+         EndListIDLife = ListIDLife
+         LivesList
+      else
+         {System.show 'Value det'#ListIDLife}
+         case ListIDLife
+         of H|T then NewPosListSub in
+            {ChangePlayersLivesList {ChangePlayersLives LivesList H Input.nbBombers PosList NewPosListSub} T EndListIDLife NewPosListSub NewPosList}
+         [] nil then
+            NewPosList = PosList
+            LivesList
+         else raise('Error in ChangePlayersLivesList function : pattern not recognized'#ListIDLife) end
+         end
+      end
+   end
+
+
+
+
    fun {ExplodeBomb Pos PortPlayer HideFPort Map LastEndChangeList PosAndPorts}
       % TODO TRES IMPORTANT : quand y'aura des explosions qui se croisent il faudra bien le gérer... On devra changer la map après tout et pas directement après
       % car sinon un feu pourrait aller plus loin qu'une boîte. => stream avec les endroits à mettre en feu
       fun {HitPlayers PosFire PosAndPorts PlayerHit N}
-         if N == 0 then PlayerHit
+         if N == 0 then
+            PlayerHit
          else
             case PosAndPorts
             of (PPlay#PosPlayer)|T then
                if PosFire == PosPlayer then ID Result in % est-ce suffisant ? ou doit-on décortiquer en X et Y ?
-                  {Send PPlay gotHit(ID Result)}
+                  {Send PPlay gotHit(ID Result)} % TODO WARNING : faire gaffe au State d'abord ?... Il faudrait pour interop ou alors changer la position quand le gars est mort
+                  {System.show 'PosFire=PosPlayer : PosFire#PosPlayer#ID#Result'#PosFire#PosPlayer#ID#Result}
                   case Result
-                  of death(NewLife) then % player just got killed
+                  of death(NewLife) then % player just got killed 
                      {BroadcastInfo PPlayers deadPlayer(ID)}
                      % TODO : vérifier si le state devient bien off ?
-                     % TODO WARNING : il faut le respawn au tour suivant => créer un port comme hideFire
-                     % TODO WARNING : il faut aussi check si Newlife==0 pour pouvoir le respawn
                      {Send PGUI hidePlayer(ID)}
                      {Send PGUI lifeUpdate(ID NewLife)}
+                     if NewLife > 0 then
+                        {Send PPlayersLives ID#NewLife}
+                     else
+                        {Send PNbDeads 1}
+                     end
                      {HitPlayers PosFire T true N-1}
                   [] null then % player already killed during this turn
                      {HitPlayers PosFire T true N-1} % player was hit during this turn so it should return true
@@ -146,6 +197,7 @@ define
                   else raise('Error in HitPlayers function : Result : pattern not recognized'#Result) end
                   end
                else % this player was not it during this turn
+                  {System.show 'PosFire != PosPlayer : PosFire#PosPlayer#N'#PosFire#PosPlayer#N}
                   {HitPlayers PosFire T PlayerHit N-1}
                end
             else raise('Error in HitPlayers function : PosAndPorts : pattern not recognized'#PosAndPorts) end
@@ -223,8 +275,8 @@ define
          if {Value.isDet ChangeRecord4} then List4 = ChangeRecord4|NewEndChangeList
          else List4 = NewEndChangeList end
 
-         thread {System.show 'LastEndChangeList'#LastEndChangeList} end
-         thread {System.show 'NewEndChangeList'#NewEndChangeList} end
+         {System.show 'LastEndChangeList'#LastEndChangeList}
+         {System.show 'NewEndChangeList'#NewEndChangeList}
 
          NewEndChangeList % returns the new unbound end of ChangeList so that we can append lists of changes from other
          % bombs exploding during the same turn (debugs border case when 2 bombs want to explode the same box : fire doesn't go further for any of the bombs)
@@ -240,7 +292,7 @@ define
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
          EndChangeList = nil % finally ends the list
-         thread {System.show 'ChangeList'#ChangeList} end
+         {System.show 'ChangeList'#ChangeList}
          NewMap = {BuildNewMapList Map ChangeList}
          {System.show 'NewMap built in ProcessBombs not isDet'}
          BombsList
@@ -248,14 +300,10 @@ define
          case BombsList
          of bomb(turn:Turn pos:Pos port:PortPlayer)|T then
             {System.show 'in case bomb ProcessBombs'} % TODO : delete
-            thread
-               {System.show 'checking if ChangeList == EndChangeList :'}
-               {System.show ChangeList==EndChangeList}
-            end
             if(Turn == NbTurn) then NewEnd in
                {System.show 'in if ProcessBombs'}
                NewEnd = {ExplodeBomb Pos PortPlayer HideFPort Map EndChangeList PosPlayersStream}
-               thread {System.show 'ChangeList # EndChangeList # NewEnd'#ChangeList#EndChangeList#NewEnd} end
+               {System.show 'ChangeList # EndChangeList # NewEnd'#ChangeList#EndChangeList#NewEnd}
                {ProcessBombs T NbTurn HideFPort Map NewMap ChangeList NewEnd PosPlayersStream}
             else
                {System.show 'in else ProcessBombs'}
@@ -386,24 +434,61 @@ define
       end
    end
    
+   fun {ProcessDeadStream NbDeadS ?NewNbDeadS}
+      fun {ProcessDeadStreamAcc NbDeadS ?NewNbDeadS Acc}
+         if {Not {Value.isDet NbDeadS}} then
+            NewNbDeadS = NbDeadS
+            Acc
+         else
+            case NbDeadS
+            of H|T then
+               {ProcessDeadStreamAcc T NewNbDeadS Acc+H}
+            else
+               raise('Error in ProcessDeadStreamAcc function : pattern not recognized'#NbDeadS) end
+            end
+         end
+      end
+   in
+      {ProcessDeadStreamAcc NbDeadS NewNbDeadS 0}
+   end
+
+   fun {ChangeList PosPlayersList PPlay Pos} % TODO WARNING : l'idéal serait d'avoir une fonction générale qui donne l'index mais il faudrait être sûr qu'on ne changera pas le mauvais port...
+      {System.show 'In ChangeList function, PosPlayersList : '#PosPlayersList}
+      if {Not {Value.isDet PosPlayersList}} then raise('Error in ChangeList function, PosPlayersList not bound')end
+      else
+         case PosPlayersList
+         of (PortElt#PosElt)|T then
+            if PPlay == PortElt then (PPlay#Pos)|T
+            else (PortElt#PosElt)|{ChangeList T PPlay Pos} end
+         [] nil then raise('Error in ChangeList function : did not find player (port)') end
+         else raise('Error in ChangeList function : pattern not recognized') end
+         end
+      end
+   end
+
    proc {RunTurnByTurn}
       BombPort
-      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersStream}
-         if NbAlive =< 1 then skip end
-         if N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersStream}
+      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS}
+         {System.show 'in RunTurn function with PosPlayersList : '#PosPlayersList}
+         if NbAlive =< 1 then {System.show 'Hehe game finished'} % TODO : display Winner with ID
+         elseif N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS}
          else
-            
-            local NewBombsList NewHideFireStream NMapProcessBombs in
+            local NewBombsList NewHideFireStream NMapProcessBombs NewLivesList EndListIDLife NewPosPlayersList in
+               {System.show 'Before ChangePlayersLivesList'}
+               NewLivesList = {ChangePlayersLivesList LivesList ListIDLife EndListIDLife PosPlayersList NewPosPlayersList}
+               {System.show 'After ChangePlayersLivesList, NewPosPLayersList :'#NewPosPlayersList}
                NewHideFireStream = {ProcessHideF HideFireStream}
                {System.show 'After NewBombsList'}
-               case PPlays#ScoreStream#PosPlayersStream of (PPlay|T)#(Score|TStream)#(PosPlayer|TPosPlayer) then ID State Action NewMap in
+               case PPlays#ScoreStream
+               of (PPlay|T)#(Score|TStream) then ID State Action NewMap MapChangeList NewNbAlive NewNbDeadS in
                   {Send PPlay getState(ID State)}
-                  if State == off then ChangeList in % Problem : have to send score to keep ordering
+                  if State == off then % Problem : have to send score to keep ordering
                      {Send PScore Score}
-                     {Send PPosPlayers PPlay#PosPlayer}
-                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs ChangeList ChangeList TPosPlayer} % check function to understand the 2x ChangeList
-                     {RunTurn N-1 NbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream TPosPlayer}
-                  else ChangeList in
+                     {System.show 'State off for ID'#ID}
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs MapChangeList MapChangeList NewPosPlayersList} % check function to understand the 2x ChangeList
+                     NewNbAlive = NbAlive - {ProcessDeadStream NbDeadS NewNbDeadS}
+                     {RunTurn N-1 NewNbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewPosPlayersList NewLivesList EndListIDLife NewNbDeadS}
+                  else NewNewPosPlayersList NewNbAlive NewNbDeadS in
                      {Send PPlay doaction(_ Action)}
                      case Action
                      of move(Pos) then
@@ -411,23 +496,27 @@ define
                         NewMap = {ProcessMove PPlay Pos Map Score}
                         {System.show 'After NewMap = ProcessMove call'}
                         {Send PGUI movePlayer(ID Pos)}
-                        {Send PPosPlayers PPlay#Pos} % send new position
+                        NewNewPosPlayersList = {ChangeList NewPosPlayersList PPlay Pos}
+                        {System.show 'After call to ChangeList function'}
                         {BroadcastInfo PPlayers movePlayer(ID Pos)}
                      [] bomb(Pos) then
                         {Send PScore Score} % Score doesn't change
                         {System.show 'bomb(Pos) : '}
                         {System.show Pos}
                         {Send PGUI spawnBomb(Pos)} % TODO : Pos ou ID Pos ? Juste Pos serait logique. Mais avec ID logique pour donner des points s'il kill qqn
-                        {Send PPosPlayers PPlay#PosPlayer}
+                        NewNewPosPlayersList = NewPosPlayersList
                         {BroadcastInfo PPlayers bombPlanted(Pos)}
                         {Send BombPort bomb(turn:NbTurn+Input.timingBomb*Input.nbBombers pos:Pos port:PPlay)}
                         NewMap = Map
                      else raise('Unrecognised msg in function Main.RunTurn') end
                      end
-                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs ChangeList ChangeList TPosPlayer} % check function to understand the 2x ChangeList
-                     {Delay 300}
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs MapChangeList MapChangeList NewNewPosPlayersList} % check function to understand the 2x ChangeList
+                     NewNbAlive = NbAlive - {ProcessDeadStream NbDeadS NewNbDeadS}
+                     {System.show 'Before delay'}
+                     {Delay 500}
+                     {System.show 'After delay'}
                      {System.show NewBombsList}
-                     {RunTurn N-1 NbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream TPosPlayer}
+                     {RunTurn N-1 NewNbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewNewPosPlayersList NewLivesList EndListIDLife NewNbDeadS}
                   end
                else raise('Problem in function Main.RunTurn') end
                end
@@ -441,10 +530,22 @@ define
    in
       BombPort = {NewPort BombsL}
       HideFPort = {NewPort HideFStream}
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream Input.map ScoreStream PosPlayersS}
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream Input.map ScoreStream PosPlayersTBT {MakeLivesList Input.nbBombers} PlayersLivesStream NbDeadsStream}
    end
-   PPosPlayers
-   PosPlayersS
+
+   PPlayersLives
+   PlayersLivesStream
+
+   fun {MakeLivesList N}
+      if N == 0 then nil
+      else
+         (N#Input.nbBombers)|{MakeLivesList N-1}
+      end
+   end
+
+   NbDeadsStream
+   PNbDeads = {NewPort NbDeadsStream}
+   PosPlayersTBT
 in
    %% Implement your controller here
 
@@ -457,11 +558,12 @@ in
    PScore = {NewPort ScoreStream}
    PPlayers = {CreatePlayers Input.nbBombers Input.colorsBombers Input.bombers}
    
-   PPosPlayers = {NewPort PosPlayersS}
+   PPlayersLives = {NewPort PlayersLivesStream} % will help to construct lists with the number of player's lives
+
    % Spawn bonuses, boxes and players
-   {SpawnMap Input.map PPlayers}
+   PosPlayersTBT = {SpawnMap Input.map PPlayers}
    
-   {Delay 5000} % TODO : synchronisation entre fichiers
+   {Delay 8000} % TODO : synchronisation entre fichiers
 
    if Input.isTurnByTurn then
       {RunTurnByTurn} % TODO un thread ?
