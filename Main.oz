@@ -63,31 +63,44 @@ define
       
    end
    */
-   fun {SpawnMap Map PPlayers}
+   fun {SpawnMap Map PPlayers NbBoxes}
       
-      fun {ProcessElt IdSquare X Y}
+      fun {ProcessElt IdSquare X Y BoxThere}
          case IdSquare
-         of 4 then pt(x:X y:Y)|nil % spawn
+         of 4 then
+            BoxThere = 0
+            pt(x:X y:Y)|nil % spawn
          % other cases not needed since points and bonuses should spawn only when boxes get destroyed
-         %[] 2 then {Send PGUI spawnPoint(pt(x:X y:Y))} nil
-         %[] 3 then {Send PGUI spawnBonus(pt(x:X y:Y))} nil
-         else nil end % wall / empty : rien à faire
-      end
-      fun {SpawnRow Row X Y}
-         case Row
-         of H|T then Z W in
-            Z = {ProcessElt H X Y}
-            W = {SpawnRow T X+1 Y}
-            {Append Z W}
-         [] nil then nil
+         [] 2 then
+            BoxThere = 1
+            nil
+         [] 3 then
+            BoxThere = 1
+            nil
+         else % wall / empty : rien à faire
+            BoxThere = 0
+            nil
          end
       end
-      fun {SpawnEntire Col Y}
+      fun {SpawnRow Row X Y AccNbBoxRow NbBoxRow}
+         case Row
+         of H|T then Z W DeltaNbBox in
+            Z = {ProcessElt H X Y DeltaNbBox}
+            W = {SpawnRow T X+1 Y AccNbBoxRow+DeltaNbBox NbBoxRow}
+            {Append Z W}
+         [] nil then
+            NbBoxRow = AccNbBoxRow
+            nil
+         end
+      end
+      fun {SpawnEntire Col Y AccNbBox NbBox}
          case Col
-         of H|T then Z in
-            Z = {SpawnRow H 1 Y}
-            {Append Z {SpawnEntire T Y+1}}
-         [] nil then nil
+         of H|T then Z NbBoxRow in
+            Z = {SpawnRow H 1 Y 0 NbBoxRow}
+            {Append Z {SpawnEntire T Y+1 AccNbBox+NbBoxRow NbBox}}
+         [] nil then
+            NbBox = AccNbBox
+            nil
          end
       end
       Spawns
@@ -106,7 +119,7 @@ define
          end
       end
    in
-      Spawns = {SpawnEntire Map 1}
+      Spawns = {SpawnEntire Map 1 0 NbBoxes}
       {SpawnPlayers Input.nbBombers PPlayers Spawns} % returns the spawns of the players (and their port) (initial positions)
       
    end
@@ -210,9 +223,21 @@ define
             Pos2 = pt(x:X y:Y)
             case {Nth {Nth Map Y} X}
             of 2 then % point box
-               {Send PGUI hideBox(Pos2)} {BroadcastInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnPoint(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#5 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)}
+               {BroadcastInfo PPlayers boxRemoved(Pos2)}
+               {Send PGUI spawnPoint(Pos2)}
+               {Send PGUI spawnFire(Pos2)}
+               ChangeRecord = X#Y#5
+               {Send HideFPort hideFire(Pos2)}
+               false
             [] 3 then % bonus box
-               {Send PGUI hideBox(Pos2)} {BroadcastInfo PPlayers boxRemoved(Pos2)} {Send PGUI spawnBonus(Pos2)} {Send PGUI spawnFire(Pos2)} ChangeRecord = X#Y#6 {Send HideFPort hideFire(Pos2)} false
+               {Send PGUI hideBox(Pos2)}
+               {BroadcastInfo PPlayers boxRemoved(Pos2)}
+               {Send PGUI spawnBonus(Pos2)}
+               {Send PGUI spawnFire(Pos2)}
+               ChangeRecord = X#Y#6
+               {Send HideFPort hideFire(Pos2)}
+               false
             [] 1 then false % wall
             else % simple floor, floor with bonus/point, spawn floor (could be a floor with a player)
                % TODO WARNING : attention si on rajoute des éléments le 'else' sera insuffisant...
@@ -286,14 +311,14 @@ define
    end
             
    
-   fun {ProcessBombs BombsList NbTurn HideFPort Map NewMap ChangeList EndChangeList PosPlayersStream}
+   fun {ProcessBombs BombsList NbTurn HideFPort Map NewMap ChangeList EndChangeList PosPlayersStream NbBoxRemoved}
       {System.show 'inProcessBombs'}
       {System.show NbTurn} % TODO : delete
       if {Not {Value.isDet BombsList}} then
          {System.show 'ProcessBombs not isDet'}
          EndChangeList = nil % finally ends the list
          {System.show 'ChangeList'#ChangeList}
-         NewMap = {BuildNewMapList Map ChangeList}
+         NewMap = {BuildNewMapList Map ChangeList 0 NbBoxRemoved}
          {System.show 'NewMap built in ProcessBombs not isDet'}
          BombsList
       else
@@ -304,11 +329,11 @@ define
                {System.show 'in if ProcessBombs'}
                NewEnd = {ExplodeBomb Pos PortPlayer HideFPort Map EndChangeList PosPlayersStream}
                {System.show 'ChangeList # EndChangeList # NewEnd'#ChangeList#EndChangeList#NewEnd}
-               {ProcessBombs T NbTurn HideFPort Map NewMap ChangeList NewEnd PosPlayersStream}
+               {ProcessBombs T NbTurn HideFPort Map NewMap ChangeList NewEnd PosPlayersStream NbBoxRemoved}
             else
                {System.show 'in else ProcessBombs'}
                EndChangeList = nil % finally ends the list
-               NewMap = {BuildNewMapList Map ChangeList}
+               NewMap = {BuildNewMapList Map ChangeList 0 NbBoxRemoved}
                BombsList
             end
          [] H|T then raise('Problem in function ProcessBombs case H|T') end
@@ -352,20 +377,28 @@ define
 
    % TODO : en simultané, ils pourront être en même temps sur une case BONUS : à gérer : +le total pour chacun ? + la moitié ? Random give ? give au premier dans notre liste (unfair) ?
 
-   fun {BuildNewMapList Map List}
+   fun {BuildNewMapList Map List Acc TotNbChanges}
       if {Value.isFree List} then {System.show 'UNBOUND LIST !!! BuildNewMapList'} end % TODO : delete
       case List
-      of (X#Y#Value)|T then {BuildNewMapList {BuildNewMap Map X Y Value} T}
-      [] nil then {System.show 'Leaving BuildNewMapList'} Map % TODO : delete show
+      of (X#Y#Value)|T then NbChange ReturnVal in
+         {BuildNewMapList {BuildNewMap Map X Y Value NbChange} T Acc+NbChange TotNbChanges}
+      [] nil then
+         {System.show 'Leaving BuildNewMapList'}
+         TotNbChanges = Acc
+         Map % TODO : delete show
       else raise('Error in BuildNewMapList : list pattern not recognized') end
       end
    end
 
-   fun {BuildNewMap Map X Y Value}
+   fun {BuildNewMap Map X Y Value NbChange}
       fun {NewRow Row X ThisX}
          {System.show 'in NewRow'}
          case Row of H|T then
-            if X == ThisX then Value|T % change into Value given
+            if X == ThisX then
+               if {Or H==2 H==3} then % we have a point box or bonus box and we destroy it
+                  NbChange = 1
+               else NbChange = 0 end
+               Value|T % change into Value given
             else H|{NewRow T X ThisX+1}
             end
          else raise('Error in NewRow function : Row != H|T') end
@@ -416,14 +449,14 @@ define
             {Send PGUI scoreUpdate(ID Score+1)}
             {Send PGUI hidePoint(Pos)}
             % make this tile a floor :
-            NewMap = {BuildNewMap Map X Y 0} % change tile into simple floor
+            NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
             {System.show 'ProcessMove : case Value == 5, map : '}
             {System.show NewMap}
             NewMap
          [] 6 then Z NewMap in % bonus
             % TODO : ProcessBonus (and send sth to the player)
             {Send PGUI hideBonus(Pos)}
-            NewMap = {BuildNewMap Map X Y 0} % change tile into simple floor
+            NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
             {ProcessBonus PPlay PScore Score}
             {System.show 'ProcessMove : case Value == 6, map : '}
             {System.show NewMap}
@@ -466,12 +499,42 @@ define
       end
    end
 
+   proc {ShowWinner ScoreStream}
+      fun {Winner PPlays ScoreList CurrWinner}
+         case PPlays
+         of PPlay|TPPlay then
+            case ScoreList#CurrWinner
+            of (Score|TScore)#(Name|WinnerScore) then
+               if Score > WinnerScore then NewWinner ID in
+                  {Send PPlay getId(ID)}
+                  {Winner TPPlay TScore ID|Score}
+               else
+                  {Winner TPPlay TScore CurrWinner}
+               end
+            else raise('Error in Winner function : pattern not recognized') end
+            end
+         [] nil then CurrWinner
+         end
+      end
+      NameScore
+   in
+      NameScore = {Winner PPlayers ScoreStream dummyID|(~1)}
+      case NameScore of Name|_ then
+         {Browser.browse 'The winner is : '}
+         {Browser.browse Name}
+         {System.show 'The winner is : '}
+         {System.show Name}
+      end
+   end
+
    proc {RunTurnByTurn}
       BombPort
-      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS}
+      proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
          {System.show 'in RunTurn function with PosPlayersList : '#PosPlayersList}
-         if NbAlive =< 1 then {System.show 'Hehe game finished'} % TODO : display Winner with ID
-         elseif N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS}
+         if {Or NbAlive=<1 NbBoxes=<0} then
+            {ShowWinner ScoreStream}
+            {System.show 'Hehe game finished'} % TODO : display Winner with ID
+         elseif N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
          else
             local NewBombsList NewHideFireStream NMapProcessBombs NewLivesList EndListIDLife NewPosPlayersList in
                {System.show 'Before ChangePlayersLivesList'}
@@ -480,14 +543,14 @@ define
                NewHideFireStream = {ProcessHideF HideFireStream}
                {System.show 'After NewBombsList'}
                case PPlays#ScoreStream
-               of (PPlay|T)#(Score|TStream) then ID State Action NewMap MapChangeList NewNbAlive NewNbDeadS in
+               of (PPlay|T)#(Score|TStream) then ID State Action NewMap MapChangeList NewNbAlive NewNbDeadS NbBoxRemoved in
                   {Send PPlay getState(ID State)}
                   if State == off then % Problem : have to send score to keep ordering
                      {Send PScore Score}
                      {System.show 'State off for ID'#ID}
-                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs MapChangeList MapChangeList NewPosPlayersList} % check function to understand the 2x ChangeList
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort Map NMapProcessBombs MapChangeList MapChangeList NewPosPlayersList NbBoxRemoved} % check function to understand the 2x ChangeList
                      NewNbAlive = NbAlive - {ProcessDeadStream NbDeadS NewNbDeadS}
-                     {RunTurn N-1 NewNbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewPosPlayersList NewLivesList EndListIDLife NewNbDeadS}
+                     {RunTurn N-1 NewNbAlive T BombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewPosPlayersList NewLivesList EndListIDLife NewNbDeadS NbBoxes-NbBoxRemoved}
                   else NewNewPosPlayersList NewNbAlive NewNbDeadS in
                      {Send PPlay doaction(_ Action)}
                      case Action
@@ -510,13 +573,13 @@ define
                         NewMap = Map
                      else raise('Unrecognised msg in function Main.RunTurn') end
                      end
-                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs MapChangeList MapChangeList NewNewPosPlayersList} % check function to understand the 2x ChangeList
+                     NewBombsList = {ProcessBombs BombsList NbTurn HideFPort NewMap NMapProcessBombs MapChangeList MapChangeList NewNewPosPlayersList NbBoxRemoved} % check function to understand the 2x ChangeList
                      NewNbAlive = NbAlive - {ProcessDeadStream NbDeadS NewNbDeadS}
                      {System.show 'Before delay'}
                      {Delay 500}
                      {System.show 'After delay'}
                      {System.show NewBombsList}
-                     {RunTurn N-1 NewNbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewNewPosPlayersList NewLivesList EndListIDLife NewNbDeadS}
+                     {RunTurn N-1 NewNbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs TStream NewNewPosPlayersList NewLivesList EndListIDLife NewNbDeadS NbBoxes-NbBoxRemoved}
                   end
                else raise('Problem in function Main.RunTurn') end
                end
@@ -530,7 +593,7 @@ define
    in
       BombPort = {NewPort BombsL}
       HideFPort = {NewPort HideFStream}
-      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream Input.map ScoreStream PosPlayersTBT {MakeLivesList Input.nbBombers} PlayersLivesStream NbDeadsStream}
+      {RunTurn Input.nbBombers Input.nbBombers PPlayers BombsL 1 HideFStream Input.map ScoreStream PosPlayersTBT {MakeLivesList Input.nbBombers} PlayersLivesStream NbDeadsStream InitNbBoxes}
    end
 
    PPlayersLives
@@ -546,6 +609,8 @@ define
    NbDeadsStream
    PNbDeads = {NewPort NbDeadsStream}
    PosPlayersTBT
+
+   InitNbBoxes
 in
    %% Implement your controller here
 
@@ -561,7 +626,7 @@ in
    PPlayersLives = {NewPort PlayersLivesStream} % will help to construct lists with the number of player's lives
 
    % Spawn bonuses, boxes and players
-   PosPlayersTBT = {SpawnMap Input.map PPlayers}
+   PosPlayersTBT = {SpawnMap Input.map PPlayers InitNbBoxes}
    
    {Delay 8000} % TODO : synchronisation entre fichiers
 

@@ -18,10 +18,11 @@
 - Update les vies et respawn (sans double kill possible cf. Moodle) : OK
 - Informer du respawn : OK
 - Informer du spawn de départ !! : OK
-- Afficher le gagnant (et donc options pour finir le jeu : plus de boxes ou strictement moins de 2 bombers) : TODO
+- Afficher le gagnant (et donc options pour finir le jeu : plus de boxes ou strictement moins de 2 bombers) : OK
 - Créer les bonus basiques (new bomb or 10 points (50/50 possibility): OK
 - synchro début GUI et début main, pas mis sur la feuille mais important ^^' : TODO
 ATTENTION : 2 bombes du même joueur ne peuvent pas être sur la même case donc que se passe-t-il : on doit le gérer dans le player quand on en crée un ou alors on doit aussi le gérer dans le Main.oz et remplacer son action par 'ne pas bouger' ?
+TODO IMPORTANT : vérifier que ça fonctionne bien, que le jeu finit bien s'il n'y a plus de boxes
 
 - Créer un player basique : OK
 
