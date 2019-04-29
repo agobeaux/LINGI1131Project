@@ -7,7 +7,9 @@ import
    System
 export
    portWindow:StartWindow
+   windowBuilt:WindowBuilt
 define
+   WindowBuilt
    
    StartWindow
    TreatStream
@@ -71,6 +73,10 @@ in
       
       {DrawMap Grid}
       GridItems = {PrepareMap Grid}
+      
+      % Here the map was built so we bind the value to let Main.oz know that the game can start
+      WindowBuilt = true
+
       handle(grid:Grid items:GridItems life:GridLife score:GridScore)
    end
 

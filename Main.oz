@@ -365,13 +365,13 @@ define
       RandomValue = {OS.rand} mod 2
       case RandomValue
       of 0 then
-         {Send PPlay add(bomb 1)}
+         {Send PPlay add(bomb 1 _)}
          {Send PScore Score}
-      [] 1 then ID in
-         {Send PPlay add(point 10)}
-         {Send PScore Score+10}
+      [] 1 then ID NewScore in
+         {Send PPlay add(point 10 NewScore)}
+         {Send PScore NewScore}
          {Send PPlay getId(ID)}
-         {Send PGUI scoreUpdate(ID Score+10)}
+         {Send PGUI scoreUpdate(ID NewScore)}
       end
    end
 
@@ -442,11 +442,11 @@ define
          [] 4 then % Floor with spawn
             {Send PScore Score}
             Map
-         [] 5 then NewMap ID in % point
-            {Send PPlay add(point 1)}
-            {Send PScore Score+1}
+         [] 5 then NewMap ID NewScore in % point
+            {Send PPlay add(point 1 NewScore)}
+            {Send PScore NewScore}
             {Send PPlay getId(ID)}
-            {Send PGUI scoreUpdate(ID Score+1)}
+            {Send PGUI scoreUpdate(ID NewScore)}
             {Send PGUI hidePoint(Pos)}
             % make this tile a floor :
             NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
@@ -507,6 +507,7 @@ define
             of (Score|TScore)#(Name|WinnerScore) then
                if Score > WinnerScore then NewWinner ID in
                   {Send PPlay getId(ID)}
+                  {System.show 'Got ID :'#ID}
                   {Winner TPPlay TScore ID|Score}
                else
                   {Winner TPPlay TScore CurrWinner}
@@ -518,10 +519,10 @@ define
       end
       NameScore
    in
+      {System.show 'ScoreStream'#ScoreStream}
       NameScore = {Winner PPlayers ScoreStream dummyID|(~1)}
       case NameScore of Name|_ then
-         {Browser.browse 'The winner is : '}
-         {Browser.browse Name}
+         {Send PGUI displayWinner(Name)}
          {System.show 'The winner is : '}
          {System.show Name}
       end
@@ -628,7 +629,9 @@ in
    % Spawn bonuses, boxes and players
    PosPlayersTBT = {SpawnMap Input.map PPlayers InitNbBoxes}
    
-   {Delay 8000} % TODO : synchronisation entre fichiers
+   %{Delay 8000} % TODO : synchronisation entre fichiers
+   {Wait GUI.windowBuilt}
+   {Delay 500}
 
    if Input.isTurnByTurn then
       {RunTurnByTurn} % TODO un thread ?
