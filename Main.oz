@@ -499,30 +499,36 @@ define
       end
    end
 
-   proc {ShowWinner ScoreStream}
-      fun {Winner PPlays ScoreList CurrWinner}
-         case PPlays
-         of PPlay|TPPlay then
-            case ScoreList#CurrWinner
-            of (Score|TScore)#(Name|WinnerScore) then
-               if Score > WinnerScore then NewWinner ID in
-                  {Send PPlay getId(ID)}
-                  {System.show 'Got ID :'#ID}
-                  {Winner TPPlay TScore ID|Score}
-               else
-                  {Winner TPPlay TScore CurrWinner}
+   proc {ShowWinner PPlaysList ScoreStream}
+      fun {Winner PPlays ScoreList CurrWinner N}
+         if N == 0 then CurrWinner
+         else
+            case PPlays
+            of PPlay|TPPlay then
+               case ScoreList#CurrWinner
+               of (Score|TScore)#(Name|WinnerScore) then
+                  if Score > WinnerScore then NewWinner ID in
+                     {Send PPlay getId(ID)}
+                     {Wait ID} % TODO : delete, utile que pour débug avec Got ID
+                     {System.show 'Got ID :'#ID}
+                     {Winner TPPlay TScore ID|Score N-1}
+                  else
+                     {Winner TPPlay TScore CurrWinner N-1}
+                  end
+               else raise('Error in Winner function : pattern not recognized. ScoreList#CurrWinner'#ScoreList#CurrWinner) end
                end
-            else raise('Error in Winner function : pattern not recognized') end
+            [] nil then {Winner PPlayers ScoreList CurrWinner N}
             end
-         [] nil then CurrWinner
          end
       end
       NameScore
    in
       {System.show 'ScoreStream'#ScoreStream}
-      NameScore = {Winner PPlayers ScoreStream dummyID|(~1)}
+      % PPlaysList might be only a part of PPlayers, that's why we don't stop in the 'nil' case
+      NameScore = {Winner PPlaysList ScoreStream dummyID|(~1) Input.nbBombers}
       case NameScore of Name|_ then
          {Send PGUI displayWinner(Name)}
+         {Wait Name}
          {System.show 'The winner is : '}
          {System.show Name}
       end
@@ -531,9 +537,10 @@ define
    proc {RunTurnByTurn}
       BombPort
       proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
-         {System.show 'in RunTurn function with PosPlayersList : '#PosPlayersList}
+         {System.show 'in RunTurn function with PosPlayersList#ScoreStream : '#PosPlayersList#ScoreStream}
+
          if {Or NbAlive=<1 NbBoxes=<0} then
-            {ShowWinner ScoreStream}
+            {ShowWinner PPlays ScoreStream}
             {System.show 'Hehe game finished'} % TODO : display Winner with ID
          elseif N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
          else
