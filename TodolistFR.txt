@@ -28,6 +28,9 @@ TODO IMPORTANT : vérifier que ça fonctionne bien, que le jeu finit bien s'il n
 
 - Jeu simultané : adaptation : TODO
 
+- Feu qui traverse les players (et vérifier que ça double kill pas) : TODO
+- Explosion de la bombe avant l'action du joueur : TODO : soit mettre nbTurn-1 pour le faire après le mouvement du joueur avant, soit remettre l'explosion avant ?
+
 - Créer un player plus avancé : TODO
 - Interopérabilité avec player de base et avec players d'autres groupes (5 tests de min 3 groupes différents)
 
