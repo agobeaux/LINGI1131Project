@@ -14,7 +14,7 @@ C = ozc -c
 X = ozengine
 endif
 
-PLAYERS = KimKardashian.oz
+PLAYERS = KimKardashian.oz TerenceTao.oz
 
 all:
 	make compileAll
