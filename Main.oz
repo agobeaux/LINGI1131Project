@@ -365,13 +365,13 @@ define
       RandomValue = {OS.rand} mod 2
       case RandomValue
       of 0 then
-         {Send PPlay add(bomb 1)}
+         {Send PPlay add(bomb 1 _)}
          {Send PScore Score}
-      [] 1 then ID in
-         {Send PPlay add(point 10)}
-         {Send PScore Score+10}
+      [] 1 then ID NewScore in
+         {Send PPlay add(point 10 NewScore)}
+         {Send PScore NewScore}
          {Send PPlay getId(ID)}
-         {Send PGUI scoreUpdate(ID Score+10)}
+         {Send PGUI scoreUpdate(ID NewScore)}
       end
    end
 
@@ -442,11 +442,11 @@ define
          [] 4 then % Floor with spawn
             {Send PScore Score}
             Map
-         [] 5 then NewMap ID in % point
-            {Send PPlay add(point 1)}
-            {Send PScore Score+1}
+         [] 5 then NewMap ID NewScore in % point
+            {Send PPlay add(point 1 NewScore)}
+            {Send PScore NewScore}
             {Send PPlay getId(ID)}
-            {Send PGUI scoreUpdate(ID Score+1)}
+            {Send PGUI scoreUpdate(ID NewScore)}
             {Send PGUI hidePoint(Pos)}
             % make this tile a floor :
             NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
@@ -499,29 +499,36 @@ define
       end
    end
 
-   proc {ShowWinner ScoreStream}
-      fun {Winner PPlays ScoreList CurrWinner}
-         case PPlays
-         of PPlay|TPPlay then
-            case ScoreList#CurrWinner
-            of (Score|TScore)#(Name|WinnerScore) then
-               if Score > WinnerScore then NewWinner ID in
-                  {Send PPlay getId(ID)}
-                  {Winner TPPlay TScore ID|Score}
-               else
-                  {Winner TPPlay TScore CurrWinner}
+   proc {ShowWinner PPlaysList ScoreStream}
+      fun {Winner PPlays ScoreList CurrWinner N}
+         if N == 0 then CurrWinner
+         else
+            case PPlays
+            of PPlay|TPPlay then
+               case ScoreList#CurrWinner
+               of (Score|TScore)#(Name|WinnerScore) then
+                  if Score > WinnerScore then NewWinner ID in
+                     {Send PPlay getId(ID)}
+                     {Wait ID} % TODO : delete, utile que pour débug avec Got ID
+                     {System.show 'Got ID :'#ID}
+                     {Winner TPPlay TScore ID|Score N-1}
+                  else
+                     {Winner TPPlay TScore CurrWinner N-1}
+                  end
+               else raise('Error in Winner function : pattern not recognized. ScoreList#CurrWinner'#ScoreList#CurrWinner) end
                end
-            else raise('Error in Winner function : pattern not recognized') end
+            [] nil then {Winner PPlayers ScoreList CurrWinner N}
             end
-         [] nil then CurrWinner
          end
       end
       NameScore
    in
-      NameScore = {Winner PPlayers ScoreStream dummyID|(~1)}
+      {System.show 'ScoreStream'#ScoreStream}
+      % PPlaysList might be only a part of PPlayers, that's why we don't stop in the 'nil' case
+      NameScore = {Winner PPlaysList ScoreStream dummyID|(~1) Input.nbBombers}
       case NameScore of Name|_ then
-         {Browser.browse 'The winner is : '}
-         {Browser.browse Name}
+         {Send PGUI displayWinner(Name)}
+         {Wait Name}
          {System.show 'The winner is : '}
          {System.show Name}
       end
@@ -530,9 +537,10 @@ define
    proc {RunTurnByTurn}
       BombPort
       proc {RunTurn N NbAlive PPlays BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
-         {System.show 'in RunTurn function with PosPlayersList : '#PosPlayersList}
+         {System.show 'in RunTurn function with PosPlayersList#ScoreStream : '#PosPlayersList#ScoreStream}
+
          if {Or NbAlive=<1 NbBoxes=<0} then
-            {ShowWinner ScoreStream}
+            {ShowWinner PPlays ScoreStream}
             {System.show 'Hehe game finished'} % TODO : display Winner with ID
          elseif N == 0 then {RunTurn Input.nbBombers NbAlive PPlayers BombsList NbTurn HideFireStream Map ScoreStream PosPlayersList LivesList ListIDLife NbDeadS NbBoxes}
          else
@@ -628,7 +636,9 @@ in
    % Spawn bonuses, boxes and players
    PosPlayersTBT = {SpawnMap Input.map PPlayers InitNbBoxes}
    
-   {Delay 8000} % TODO : synchronisation entre fichiers
+   %{Delay 8000} % TODO : synchronisation entre fichiers
+   {Wait GUI.windowBuilt}
+   {Delay 500}
 
    if Input.isTurnByTurn then
       {RunTurnByTurn} % TODO un thread ?
