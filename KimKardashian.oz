@@ -47,7 +47,7 @@ in
       thread
          % The player is initially off the board and has no spawn position, until (assign)spawn.
          ID = FID
-	      {TreatStream OutputStream off Input.nbLives null Input.nbBombs Input.Map 0}
+         {TreatStream OutputStream summary(state:off lives:Input.nbLives pos:null bombs:Input.nbBombs map:Input.Map score:0)}
       end % thread
       Port
    end % fun StartPlayer
@@ -55,39 +55,40 @@ in
    /**
     * Bind the ID of the player.
     * 
-    * @param ?RetID: unbound, set to ID by function.
+    * @param Summary: summary of the game.
+    * @param  ?RetID: unbound, set to ID by function.
     */
-   fun {GetId ?RetID}
+   fun {GetId Summary ?RetID}
       RetID = ID
-      true
+      Summary
    end % fun GetId
 
    /**
     * Bind the ID and State of the player.
     *
-    * @param     State: state of the player.
+    * @param   Summary: summary of the game.
     * @param    ?RetID: unbound, set to ID by function.
     * @param ?RetState: unbound, set to State by function.
     */
-   fun {GetState State ?RetID ?RetState}
+   fun {GetState Summary ?RetID ?RetState}
       RetID = ID
-      RetState = State
-      true
+      RetState = Summary.state
+      Summary
    end % fun GetState
 
    /**
     * Assign a spawn position.
     * 
-    * @param SpPos: Spawn position of the current player.
+    * @param Summary: summary of the game.
+    * @param   SpPos: Spawn position of the current player.
     */
-   fun {AssignSpawn SpPos}
+   fun {AssignSpawn Summary SpPos}
       if {Value.isDet SpawnPos} then
          raise('Spawn position already set in AssignSpawn.') end
-         false
       else
          SpawnPos = SpPos
-         true
       end % if
+      Summary
    end % fun AssignSpawn
 
    /**
@@ -96,61 +97,51 @@ in
     *  - the player is not already on the board.
     * If any of these conditions are not met, then null is returned for both the ID and Pos.
     *
-    * @param   State: state of the player.
-    * @param   Lives: number of lives of the player.
+    * @param Summary: summary of the game.
     * @param  ?RetID: unbound, set to ID (or null) by function.
     * @param ?RetPos: unbound, set to SpawnPos (or null) by function.
     */
-   fun {SpawnF State Lives ?RetID ?RetSpawn}
-      if State == on then
+   fun {SpawnF Summary ?RetID ?RetSpawn}
+      if Summary.state == on then
          RetID = null
          RetSpawn = null
          raise('Tried spawning a player that was already on the board in SpawnF.') end
-         false
-      elseif Lives =< 0 then
+      elseif Summary.lives =< 0 then
          RetID = null
          RetSpawn = null
          raise('No more lives left in SpawnF.') end
-         false
       else
          RetID = ID
          RetSpawn = SpawnPos
-         true
       end % if
+      Summary
    end % fun SpawnF
 
    /**
     * Determine what action the player should perform.
     * 
-    * @param      State: state of the player.
-    * @param        Pos: position of the player.
-    * @param      Bombs: number of bombs of the player.
-    * @param        Map: map of the game.
+    * @param    Summary: summary of the game.
     * @param     ?RetID: unbound, set to ID (or null) by function.
     * @param ?RetAction: unbound, set to the action the player should perform (or null) by function.
-    * @param    ?NewPos: unbound, new position of the player.
-    * @param  ?NewBombs: unbound, new number of bombs of the player.
     */
-   fun {DoAction State Pos Bombs Map ?RetID ?RetAction ?NewPos ?NewBombs}
-      if State == off then
+   fun {DoAction Summary ?RetID ?RetAction}
+      if Summary.state == off then
          RetID = null
          RetAction = null
-         NewPos = Pos
-         NewBombs = Bombs
          raise('Off-board player tried to perform an action in DoAction.') end
-         false
-      elseif Bombs > 0 andthen {OS.rand} mod 10 > 8 then
-         local CircularNext MoveDir Available Pick in
+         Summary
+      elseif Summary.bombs > 0 andthen {OS.rand} mod 10 > 8 then
+         local CircularNext MoveDir Available Pick NewPos in
             /**
             * Determine whether a given move is legal.
             *
             * @param Dir: queried direction.
             */
             fun {MoveDir Dir}
-               if Dir == xplus andthen {Nth {Nth Map Pos.y} Pos.x+1} == 1 then ok
-               elseif Dir == xminus andthen {Nth {Nth Map Pos.y} Pos.x-1} == 1 then ok
-               elseif Dir == yplus andthen {Nth {Nth Map Pos.y+1} Pos.x} == 1 then ok
-               elseif Dir == yminus andthen {Nth {Nth Map Pos.y-1} Pos.x} == 1 then ok
+               if Dir == xplus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x+1} == 1 then ok
+               elseif Dir == xminus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x-1} == 1 then ok
+               elseif Dir == yplus andthen {Nth {Nth Summary.map Summary.pos.y+1} Summary.pos.x} == 1 then ok
+               elseif Dir == yminus andthen {Nth {Nth Summary.map Summary.pos.y-1} Summary.pos.x} == 1 then ok
                else ko
                end % if
             end % fun MoveDir
@@ -175,63 +166,48 @@ in
 
             % Randomly decide which way to move, among available directions.
             case {CircularNext Available Pick} 
-            of 1 then NewPos = pt(x:Pos.x+1 y:Pos.y)
-            [] 2 then NewPos = pt(x:Pos.x-1 y:Pos.y)
-            [] 3 then NewPos = pt(x:Pos.x y:Pos.y+1)
-            [] 4 then NewPos = pt(x:Pos.x y:Pos.y-1)
+            of 1 then NewPos = pt(x:Summary.pos.x+1 y:Summary.pos.y)
+            [] 2 then NewPos = pt(x:Summary.pos.x-1 y:Summary.pos.y)
+            [] 3 then NewPos = pt(x:Summary.pos.x y:Summary.pos.y+1)
+            [] 4 then NewPos = pt(x:Summary.pos.x y:Summary.pos.y-1)
             end % case
 
             RetID = ID
             RetAction = move(NewPos)
-            NewBombs = Bombs
-            true
+            summary(state:Summary.state lives:Summary.lives pos:NewPos bombs:Summary.bombs map:Summary.map score:Summary.score)
          end % local
       else
          RetID = ID
-         RetAction = bomb(Pos)
-         NewPos = Pos
-         NewBombs = Bombs - 1
-         true
+         RetAction = bomb(Summary.pos)
+         summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs-1 map:Summary.map score:Summary.score)
       end % if
    end % fun DoAction
 
    /**
     * Add an item to the player.
     *
-    * @param      State: state of the player.
-    * @param      Bombs: the number of bombs of the player.
-    * @param      Score: the score of the player.
+    * @param    Summary: summary of the game.
     * @param       Type: the type of the item.
     * @param     Option: the value of the item.
     * @param ?RetResult: unobund, new value of the counter.
-    * @param  ?NewBombs: unbound, new number of bombs of the player.
-    * @param  ?NewScore: unbound, new score of the player.
     */
-   fun {Add State Bombs Score Type Option ?RetResult ?NewBombs ?NewScore}
-      if State == off then
+   fun {Add Summary Type Option ?RetResult}
+      if Summary.state == off then
          RetResult = 69
-         NewBombs = Bombs
-         NewScore = Score
          raise('Tried adding item to off-board player in Add.') end
-         false
+         Summary
       else
          case Type
          of bomb then
-            NewBombs = Bombs + Option
-            NewScore = Score
-            RetResult = NewBombs
-            true
+            RetResult = Summary.bombs + Option
+            summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs+Option map:Summary.map score:Summary.score)
          [] point then
-            NewScore = Score + 1
-            NewBombs = Bombs
-            RetResult = NewScore
-            true
+            RetResult = Summary.score+1
+            summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs map:Summary.map score:Summary.score+1)
          else
             RetResult = 69
-            NewBombs = Bombs
-            NewScore = Score
             raise('Unknown type in Add.') end
-            false
+            Summary
          end % case Type
       end % if
    end % fun Add
@@ -239,34 +215,25 @@ in
    /**
     * Handle getting hit by fire.
     * 
-    * @param      State: state of the player.
-    * @param      Lives: number of lives of the player
+    * @param    Summary: summary of the game.
     * @param     ?RetID: unbound, <bomber> ID of the player.
     * @param ?RetResult: unbound, result of getting hit.
-    * @param  ?NewState: unbound, new state of the player.
-    * @param  ?NewLives: unbound, new number of lives of the player.
     */
-   fun {GotHit State Lives ?RetID ?RetResult ?NewState ?NewLives}
-      if State == off then
+   fun {GotHit Summary ?RetID ?RetResult}
+      if Summary.state == off then
          RetID = null
          RetResult = off
-         NewState = State
-         NewLives = Lives
          raise('Off-board player received gotHit message in GotHit.') end
-         false
-      elseif Lives =< 0 then
+         Summary
+      elseif Summary.lives =< 0 then
          RetID = null
          RetResult = off
-         NewState = State
-         NewLives = Lives
          raise('Dead player received gotHit message in GotHit.') end
-         false
+         Summary
       else
          RetID = ID
-         NewState = off
-         NewLives = Lives - 1
-         RetResult = death(NewLives)
-         true
+         RetResult = death(Summary.lives-1)
+         summary(state:off lives:Summary.lives-1 pos:Summary.pos bombs:Summary.bombs map:Summary.map score:Summary.score)
       end % if
    end % fun GotHit
 
@@ -314,98 +281,51 @@ in
    /**
     * Handle informational messages.
     *
-    * @param     Map: map of the game.
+    * @param Summary: summary of the game.
     * @param Message: informational message being handled.
-    * @param ?NewMap: unbound, new map of the game.
     */
-   fun {Info Map Message ?NewMap}
+   fun {Info Summary Message}
       case Message
       of spawnPlayer(ID SPPos) then
-         true
+         Summary
       [] movePlayer(ID MPPos) then
-         true
+         Summary
       [] deadPlayer(ID) then
-         true
+         Summary
       [] bombPlanted(BPPos) then
-         true
+         Summary
       [] bombExploded(BEPos) then
-         true
+         Summary
       [] boxRemoved(BRPos) then
-         NewMap = {UpdateMap Map BRPos.x BRPos.y 1}
-         true
+         summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs map:{UpdateMap Map BRPos.x BRPos.y 1} score:Summary.score)
       end % case Message
    end % fun Info
 
    /**
     * Read the current stream to determine actions.
     *
-    * @param Stream: input stream of bomber messages.
-    * @param  State: state of the player.
-    * @param  Lives: number of lives of the player.
-    * @param    Pos: position of the player.
-    * @param  Bombs: number of bombs of the player.
-    * @param    Map: map of the game.
-    * @param  Score: score of the player.
+    * @param  Stream: input stream of bomber messages.
+    * @param Summary: summary of the game.
     */
-   proc {TreatStream Stream State Lives Pos Bombs Map Score}
+   proc {TreatStream Stream Summary}
       case Stream
       of nil then skip
       [] getId(RetID)|S then
-         if {GetId RetID} then
-            {TreatStream S State Lives Pos Bombs Map Score}
-         else
-            skip
-         end % if
+         {TreatStream S {GetId Summary RetID}}
       [] getState(RetID RetState)|S then
-         if {GetState State RetID RetState} then
-            {TreatStream S State Lives Pos Bombs Map Score}
-         else
-            skip
-         end % if
+         {TreatStream S {GetState Summary RetID RetState}}
       [] assignSpawn(SpPos)|S then
-         if {AssignSpawn SpPos} then
-            {TreatStream S State Lives Pos Bombs Map Score}
-         else
-            skip
-         end % if
+         {TreatStream S {AssignSpawn Summary SpPos}}
       [] spawn(RetID RetPos)|S then
-         if {SpawnF State Lives RetID RetPos} then
-            {TreatStream S on Lives SpawnPos Bombs Map Score}
-         else
-            skip
-         end % if
+         {TreatStream S {SpawnF Summary RetID RetPos}}
       [] doaction(RetID RetAction)|S then
-         local NewPos NewBombs in
-            if {DoAction State Pos Bombs Map RetID RetAction NewPos NewBombs} then
-               {TreatStream S State Lives NewPos NewBombs Map Score}
-            else
-               skip
-            end % if
-         end % local
+         {TreatStream S {DoAction Summary RetID RetAction}}
       [] add(Type Option RetResult)|S then
-         local NewBombs NewScore in
-            if {Add State Bombs Score Type Option RetResult NewBombs NewScore} then
-               {TreatStream S State Lives Pos NewBombs Map NewScore}
-            else
-               skip
-            end % if
-         end % local
+         {TreatStream S {Add Summary Type Option RetResult}}
       [] gotHit(RetID RetResult)|S then
-         local NewState NewLives in
-            if {GotHit State Lives RetID RetResult NewState NewLives} then
-               {TreatStream S NewState NewLives Pos Bombs Map Score}
-            else
-               skip
-            end % if
-         end % local
+         {TreatStream S {GotHit Summary RetID RetResult}}
       [] info(Message)|S then
-         local NewMap in
-            if {Info Map Message NewMap} then
-               {TreatStream S State Lives Pos Bombs NewMap Score}
-            else
-               skip
-            end % local 
-         end % if
+         {TreatStream S {Info Summary Message}}
       else
          skip
       end % case Stream
