@@ -14,10 +14,8 @@ C = ozc -c
 X = ozengine
 endif
 
-PLAYERS = KimKardashian.oz TerenceTao.oz
-
 all:
-	make clean
+	# make clean
 	make compileAll
 	make run
 
@@ -32,7 +30,7 @@ compile:
 	@$(C) Main.oz
 
 compilePlayers:
-	@$(C) $(PLAYERS)
+	@$(C) Player001*.oz
 
 *.ozf:
 	@$(C) *.oz

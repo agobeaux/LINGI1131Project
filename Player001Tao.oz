@@ -202,7 +202,7 @@ in
       else
          RetID = Summary.id
          RetSpawn = Summary.sppos
-         {AdjoinList Summary [state#on pos#Summary.sppos]}
+         {AdjoinList Summary [state#on pos#Summary.sppos score#0]}
       end % if
    end % fun SpawnF
 
