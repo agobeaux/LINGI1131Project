@@ -17,6 +17,7 @@ endif
 PLAYERS = KimKardashian.oz TerenceTao.oz
 
 all:
+	make clean
 	make compileAll
 	make run
 
