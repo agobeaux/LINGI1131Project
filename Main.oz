@@ -20,7 +20,7 @@ define
             Bomber = bomber(id:N color:Color name:Name)
             {Send PGUI initPlayer(Bomber)}
             {Send PScore 0}
-            {PlayerManager.playerGenerator player000bomber Bomber}|{CreatePlayers N-1 T1 T2}
+            {PlayerManager.playerGenerator Name Bomber}|{CreatePlayers N-1 T1 T2}
          else nil
          end
       end
