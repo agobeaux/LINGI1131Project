@@ -99,12 +99,12 @@ in
 		    3:label(image:Grass width:1 height:1 bg:c(0 0 204))
 		    4:label(image:Glass width:1 height:1 bg:c(0 150 150))
 		   )
-   Items = items(boxpoint:fun{$ Handle} label(image:Chest borderwidth:2 relief:raised width:30 height:30 bg:c(139 69 19) handle:Handle) end 
-		 boxbonus:fun{$ Handle} label(image:SpecialChest borderwidth:2 relief:raised width:30 height:30 bg:c(210 105 30) handle:Handle) end 
-		 point:fun{$ Handle} label(image:PointIcon height:30 width:30 handle:Handle bg:green) end 
-		 bonus:fun{$ Handle} label(image:BonusIcon height:30 width:30 handle:Handle bg:green) end 
-		 bomb:fun{$ Handle} label(image:BombIcon height:30 width:30 handle:Handle bg:black) end 
-		 fire:fun{$ Handle} label(image:Lava height:40 width:40 handle:Handle bg:green) end 
+   Items = items(boxpoint:fun{$ Handle} label(image:Chest borderwidth:2 relief:raised width:50 height:50 bg:c(139 69 19) handle:Handle) end 
+		 boxbonus:fun{$ Handle} label(image:SpecialChest borderwidth:2 relief:raised width:50 height:50 bg:c(210 105 30) handle:Handle) end 
+		 point:fun{$ Handle} label(image:PointIcon height:50 width:50 handle:Handle bg:green) end 
+		 bonus:fun{$ Handle} label(image:BonusIcon height:50 width:50 handle:Handle bg:green) end 
+		 bomb:fun{$ Handle} label(image:BombIcon height:50 width:50 handle:Handle bg:black) end 
+		 fire:fun{$ Handle} label(image:Lava height:50 width:50 handle:Handle bg:green) end 
 		)
    
 %%%%% Function to draw the map

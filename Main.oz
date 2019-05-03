@@ -411,15 +411,29 @@ define
    
    fun {ProcessBonus PPlay Score}
       RandomValue
+      Sum
+      fun {RandomChoice Prob0 Prob1 Prob2}
+         Sum = Prob0+Prob1+Prob2
+         RandomValue = {OS.rand} mod Sum
+         if RandomValue < Prob0 then 0
+         elseif RandomValue < Prob0+Prob1 then 1
+         else 2
+         end
+      end
+      Choice
    in
       {System.show 'In ProcessBonus function with PPlay#Score'#PPlay#Score}
-      RandomValue = {OS.rand} mod 2
-      case RandomValue
-      of 0 then
+      if Input.useExtention then
+         Choice = {RandomChoice 4 4 2}
+      else
+         Choice = {RandomChoice 5 5 0}
+      end
+      case Choice
+      of 0 then % bomb bonus
          {Send PPlay add(bomb 1 _)}
          {System.show 'In ProcessBonus  before returning Score'#Score}
          Score
-      [] 1 then ID NewScore in
+      [] 1 then ID NewScore in % 10 points bonus
          {Send PPlay add(point 10 NewScore)}
          {Send PPlay getId(ID)}
          {System.show 'before wait ID NewScore'}
@@ -429,6 +443,17 @@ define
          {Send PGUI scoreUpdate(ID NewScore)}
          {System.show 'In ProcessBonus  before returning NewScore'#NewScore}
          NewScore
+      [] 2 then ID NewScore in % 1 point malus
+         {Send PPlay add(point ~1 NewScore)}
+         {Send PPlay getId(ID)}
+         {System.show 'before wait ID NewScore'}
+         {Wait ID} % TODO : vraiment nécessaire ? ... Le ID n'était pas bound dans un cas...
+         {Wait NewScore}
+         {System.show 'after wait ID NewScore'}
+         {Send PGUI scoreUpdate(ID NewScore)}
+         {System.show 'In ProcessBonus  before returning NewScore'#NewScore}
+         NewScore
+      else raise('Error in ProcessBonus function : Choice not recognized'#Choice) end
       end
    end
 
@@ -758,7 +783,6 @@ define
                {Send PlayerPort doaction(_ Action)}
                {Wait Action} % Obligatoire pour attendre
                {Send SimulPort PlayerPort#ID#Action}
-               {Delay 1000} %TODO WARNING : delete, c'est là pour l'interop
                {SimulSendActions PlayerPort StopVar}
             end
          end
