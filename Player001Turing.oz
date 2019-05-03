@@ -101,6 +101,7 @@ in
             else
                {DoUpdateBombs T {Append Acc [bomb(pos:P time:Time-1)]}}
             end % if
+         /*
          [] bomb(pos:P time:T) then
             if Time == 0 then
                Acc
@@ -108,6 +109,9 @@ in
                {Append Acc [bomb(pos:P time:T)]}
             end % if
          end % case BombList
+         */
+         else raise('UpdateBombs : pattern not recognized :'#BombList) end
+         end
       end % fun DoUpdateBombs
    in
       {DoUpdateBombs BombList nil}
@@ -539,13 +543,13 @@ in
    fun {GotHit Summary RetID RetResult}
       if Summary.state == off then
          RetID = null
-         RetResult = off
-         raise('Off-board player received gotHit message in GotHit.') end
+         RetResult = null
+         {System.show 'Off-board player received gotHit message in GotHit.'}
          Summary
       elseif Summary.lives =< 0 then
          RetID = null
-         RetResult = off
-         raise('Dead player received gotHit message in GotHit.') end
+         RetResult = null
+         {System.show 'Dead player received gotHit message in GotHit.'}
          Summary
       else NewLives in
          RetID = Summary.id
