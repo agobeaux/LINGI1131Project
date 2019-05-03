@@ -4,7 +4,11 @@
 \BOOKMARK [2][-]{subsection.2.2}{Simultaneous controller}{section.2}% 4
 \BOOKMARK [1][-]{section.3}{Player structure}{}% 5
 \BOOKMARK [2][-]{subsection.3.1}{General structure}{section.3}% 6
-\BOOKMARK [1][-]{section.4}{Interoperability}{}% 7
-\BOOKMARK [1][-]{section.5}{Extensions}{}% 8
-\BOOKMARK [1][-]{section.6}{Conclusion}{}% 9
-\BOOKMARK [1][-]{section*.1}{References}{}% 10
+\BOOKMARK [2][-]{subsection.3.2}{Decision algorithms}{section.3}% 7
+\BOOKMARK [3][-]{subsubsection.3.2.1}{Basic player}{subsection.3.2}% 8
+\BOOKMARK [3][-]{subsubsection.3.2.2}{Advanced player}{subsection.3.2}% 9
+\BOOKMARK [3][-]{subsubsection.3.2.3}{Intelligent player}{subsection.3.2}% 10
+\BOOKMARK [1][-]{section.4}{Interoperability}{}% 11
+\BOOKMARK [1][-]{section.5}{Extensions}{}% 12
+\BOOKMARK [1][-]{section.6}{Conclusion}{}% 13
+\BOOKMARK [1][-]{section*.1}{References}{}% 14

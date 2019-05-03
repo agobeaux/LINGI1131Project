@@ -7,6 +7,7 @@
 \usepackage{hyperref}
 \usepackage[T1]{fontenc}
 \usepackage{inconsolata}
+\usepackage{siunitx}
 
 \usepackage{color}
 \definecolor{bluekeywords}{rgb}{0.13,0.13,1}
@@ -30,11 +31,14 @@
 
 \hyphenation{op-tical net-works semi-conduc-tor}
 
+\newcommand{\ntt}{\normalfont\ttfamily}
+\newcommand{\fn}[1]{{\protect\ntt#1}}
+
 \begin{document}
 \title{Ozploding bozmbs -- Bomberman in Oz}
 \author{Alexandre Gobeaux and Gilles Peiffer%
 \IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Alexandre Gobeaux -- 42191600\protect\\
-E-mail: \href{mailto:gilles.peiffer@student.uclouvain.be}{gilles.peiffer@student.uclouvain.be}%
+E-mail: \href{mailto:alexandre.gobeaux@student.uclouvain.be}{alexandre.gobeaux@student.uclouvain.be}%
 \IEEEcompsocthanksitem Gilles Peiffer -- 24321600 \protect\\
 E-mail: \href{mailto:gilles.peiffer@student.uclouvain.be}{gilles.peiffer@student.uclouvain.be}}
 }
@@ -74,9 +78,61 @@ This paper presents a brief summary of the results of these tests.
 \section{Player structure}
 
 \subsection{General structure}
-\IEEEPARstart{P}{layers} have to respond to different messages they can get from the controller.
-In order to handle each of these messages, multiple so-called ``handler functions'' were created, one for each possible message.
-One also has to store all relevant information about a player, such as its state, ID, number of lives, position on the board, etc.; in order to do this in a clean manner, the authors opted to use record structures, which can easily be modified with the \lstinline|AdjoinList| function.
+\IEEEPARstart{I}{n} order to play the game intelligently, players have to store all relevant information about a game; in order to do this in a clean manner, the authors opted to use record structures, which can easily be modified with the \lstinline|AdjoinList| function.
+These records change vary for more advanced players, as they need to store more data about the game in order to make use of their intelligent strategies, but the records always contain at least the following fields:
+\begin{itemize}
+	\item \lstinline|id|: ID of the player;
+	\item \lstinline|state|: state of the player;
+	\item \lstinline|lives|: number of remaining lives;
+	\item \lstinline|pos|: current position;
+	\item \lstinline|sppos|: assigned spawn position;
+	\item \lstinline|bombs|: number of bombs owned;
+	\item \lstinline|map|: map of the game;
+	\item \lstinline|score|: number of points.
+\end{itemize}
+
+Players have to respond to different messages they can get from the controller, in the form of a stream of instructions.
+In order to handle each of these messages, multiple so-called ``handler functions'' were created, one for each possible instruction.
+Most of the messages that a player can receive in its stream are relatively straightforward; in this paper, only the most important instruction, \lstinline|doaction(ID Action)| is explained.
+
+The \lstinline|doaction(ID Action)| message asks the player for its ID and its next action (place a bomb at its current location or move to a neighbouring location).
+Multiple players were implemented, with the difference between them lying mainly in the way the ``optimal'' action is computed.
+These differences are explained in Section~\ref{sec:playerai}.
+
+\subsection{Decision algorithms}
+\label{sec:playerai}
+\subsubsection{Basic player}
+In our basic random player, \fn{Player001Kardashian.ozf}, the decision algorithm looks like this:
+\begin{itemize}
+	\item If the player has no bombs left, move to a random neighbour with uniform probability over the acceptable moves.
+	\item If the player has bombs left, the player has a \SI{10}{\percent} chance to drop a bomb, and a \SI{90}{\percent} chance to move to a randomly chosen acceptable neighbour.
+\end{itemize}
+
+This strategy is not very efficient: the player does not avoid bombs, and does not hunt for points.
+
+\subsubsection{Advanced player}
+Our next player, \fn{Player001Tao.ozf}, is slightly more advanced; its decision algorithm tries to avoid standing in dangerous areas, i.e. too close to bombs.
+This means that the advanced player has to keep track of where bombs are located.
+In order to do this, one must simply add an argument to the \lstinline|summary| record: \lstinline|bomblist|, which stores a list of bombs that are currently on the map.
+When the player has to determine its next action, it uses the following algorithm:
+\begin{itemize}
+	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
+	\item If the player has bombs left, the player has a \SI{10}{\percent} chance to drop a bomb, and a \SI{90}{\percent} chance to move according to the algorithm above.
+\end{itemize}
+
+This strategy is more successful than the basic player, and most of the time manages to avoid bombs.
+It does not however hunt for points or bonuses, and can make wrong choices when trying to avoid bombs (forcing itself into a dead end, for example).
+
+\subsubsection{Intelligent player}
+The intelligent player, \fn{Player001Turing.ozf}, builds further on what the advanced player does, by adding the ability to intelligently search for points and bonuses, with the latter being preferred in most cases.
+The algorithm is the following:
+\begin{itemize}
+	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
+	If multiple neighbours are equally safe, run a breadth-first search for points and one for bonuses.
+	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(2\) to work fairly well.}.
+	The next move on the path to 
+	\item If the player has bombs left, the player has a \SI{10}{\percent} chance to drop a bomb, and a \SI{90}{\percent} chance to move according to the algorithm above.
+\end{itemize}
 
 \section{Interoperability}
 

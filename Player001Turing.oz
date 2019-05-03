@@ -211,7 +211,7 @@ in
       else
          RetID = Summary.id
          RetSpawn = Summary.sppos
-         {AdjoinList Summary [state#on pos#Summary.sppos score#0]}
+         {AdjoinList Summary [state#on pos#Summary.sppos]}
       end % if
    end % fun SpawnF
 
@@ -509,8 +509,8 @@ in
     */
    fun {Add Summary Type Option RetResult}
       if Summary.state == off then
-         RetResult = 69
-         raise('Tried adding item to off-board player in Add.') end
+         RetResult = Summary.score
+         {System.show 'Tried adding item to off-board player in Add.'}
          Summary
       else
          case Type
