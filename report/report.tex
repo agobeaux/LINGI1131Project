@@ -25,7 +25,8 @@
 	commentstyle=\color{greencomments},
 	keywordstyle=\color{bluekeywords},
 	stringstyle=\color{redstrings},
-	basicstyle=\ttfamily
+	basicstyle=\ttfamily,
+	tabsize=4
 }
 
 
@@ -35,7 +36,7 @@
 \newcommand{\fn}[1]{{\protect\ntt#1}}
 
 \begin{document}
-\title{Ozploding bozmbs -- Bomberman in Oz}
+\title{Ozploding bozmbs --- Bomberman in Oz}
 \author{Alexandre Gobeaux and Gilles Peiffer%
 \IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Alexandre Gobeaux -- 42191600\protect\\
 E-mail: \href{mailto:alexandre.gobeaux@student.uclouvain.be}{alexandre.gobeaux@student.uclouvain.be}%
@@ -43,7 +44,7 @@ E-mail: \href{mailto:alexandre.gobeaux@student.uclouvain.be}{alexandre.gobeaux@s
 E-mail: \href{mailto:gilles.peiffer@student.uclouvain.be}{gilles.peiffer@student.uclouvain.be}}
 }
 
-\markboth{Ozploding bozmbs -- Bomberman in Oz}%
+\markboth{Ozploding bozmbs --- Bomberman in Oz}%
 {Alexandre Gobeaux and Gilles Peiffer}
 
 
@@ -67,9 +68,16 @@ This paper presents a brief summary of the results of these tests.
 
 \section{Introduction}
 
-\IEEEPARstart{B}{omberman} is a famous game.
+\IEEEPARstart{B}{omberman} is a famous game involving multiple players, a map with bombs and boxes and several ways to win points and eventually the game.
+For this year's project, our task was to implement this game in the Oz programming language.
+Implementing the game required writing the code for both the controller, as detailed in Section~\ref{sec:controller}, as well as writing some (not so) rudimentary players, explained in Section~\ref{sec:player}.
+To validate our implementation, we conducted interoperability tests with several other groups.
+The summaries of these tests are available in Section~\ref{sec:interop}.
+Finally, some extensions were implemented, as well as all the mandatory parts.
+An exhaustive list of extensions is given in Section~\ref{sec:extensions}.
 
 \section{Controller structure}
+\label{sec:controller}
 \IEEEPARstart{T}{he} controller in \fn{Main.ozf} can play the game in two modes: turn-by-turn of simultaneously.
 We mainly detail the workflow of the turn-by-turn controller, as the simultaneous controller is very similar to this for the main part.
 
@@ -108,6 +116,7 @@ Conceptually, it works by creating one global thread, common to all players, and
 Once this reply is received, it is then sent to a stream on the main thread and handled in a similar way to how it was handled by the turn-by-turn controller.
 
 \section{Player structure}
+\label{sec:player}
 \subsection{General structure}
 \IEEEPARstart{I}{n} order to play the game intelligently, players have to store all relevant information about a game; in order to do this in a clean manner, the authors opted to use record structures, which can easily be modified with the \lstinline|AdjoinList| function.
 These records change vary for more advanced players, as they need to store more data about the game in order to make use of their intelligent strategies, but the records always contain at least the following fields:
@@ -161,21 +170,76 @@ The algorithm is the following:
 \begin{itemize}
 	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
 	If multiple neighbours are equally safe, run an iterative deepening depth-first search for points and one for bonuses.
-	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(3\) to work fairly well.}.
+	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found \(d_{\textnormal{bon}} > 3d_{\textnormal{pt}}\) to be a good cutoff value.}.
 	If there is a point target and no bonuses, the player moves towards it on the shortest path.
 	Finally, if there are no special targets, the player chooses a random neighbour from the safe options.
 	\item If the player has bombs left, it tries to place a bomb given that it is next to a box (in order to lay bare its content).
 	Otherwise, it moves towards a position according to the algorithm above.
 \end{itemize}
 
-This strategy works very well, and consistently came out as one of the top AIs when competing with other teams.
+This strategy works very well, and won every single interoperability game it competed in.
+
+\subsection{Simultaneous players}
+In order to be able to play the game in simultaneous mode, we had to implement a thinking delay in the players when deciding on their next action.
+The code for that is of the form
+\begin{lstlisting}
+if Input.isTurnByTurn then
+	% Decide next move.
+else
+	thread
+		% Random think delay.
+		% Decide next move.
+	end
+end
+\end{lstlisting}
 
 \section{Interoperability}
+\label{sec:interop}
 \IEEEPARstart{I}{n} order to validate our implementation, we carried out interoperability tests with various groups.
 These tests helped us to identify misunderstandings in the project specification, as well as find some tricky bugs.
+Where necessary, players were renamed to conform to the naming guideline specified in the project statement.
+
+\subsection{Group 0 -- Maudoux, Verhaeghe}
+\subsubsection{\fn{Player000bomber.ozf}}
+Testing for interoperability with the default player helped us get started, and helped improve our algorithms.
+All our players work with the default player, in either mode.
+
+\subsection{Group 7 -- Bousselmi, Zarza Davila}
+\subsubsection{\fn{Player007Scared.ozf}}
+With this group, the interoperability test was repeated twice, playing in the simultaneous mode, on each controller and with \fn{Player001Turing.ozf}.
+While testing, we found their player's behavior, while erratic, to be correct.
+Our player performed quite well, winning both rounds comfortably.
+Other than that, nothing really worth mentioning happened; both players and controllers seemed correct.
+
+\subsection{Group 9 -- Thibaut, Tran}
+\subsubsection{\fn{Player009defense.ozf}}
+This group's player was tested in the simultaneous mode, against both of our more advanced players.
+This gave us another good indication that our implementations conform to the requirements laid out in the project statement.
+\subsubsection{\fn{Player009notsafedefense.ozf}}
+Like this group's other player, this interoperability test went well, with both players doing what they were supposed to.
+
+\subsection{Group 10 -- Nguyen, Verbois}
+\subsubsection{\fn{Player010IA2.ozf}}
+This player was tested in the simultaneous game mode on our computer and in the turn-by-turn mode on theirs, against \fn{Player001Turing.ozf}.
+Our AI clearly proved superior, but both players performed as expected and respected the project requirements.
+
+\subsection{Group 13 -- De Vogeleer, Diels}
+\subsubsection{\fn{Player013smart.ozf}}
+Both advanced players were tested with this implementation, yielding correct results both in turn-by-turn mode and simultaneous mode.
+
+\subsection{Group 17 -- Clément, Moueddene}
+\subsubsection{\fn{Player017advanced.ozf}}
+In this test, each group tested one mode, on the default map and with \fn{Player001Turing.ozf} as the player's opponent.
+The latter won both games, and no problems were found with the controllers or players.
+
+\subsection{Group 38 -- de Keersmaeker, Gérard}
+\subsubsection{\fn{Player038Luigi.ozf}}
+Testing our implementation's interoperability with this group proved fruitful: while testing in the simultaneous mode, with our own \fn{Player001Turing.ozf} playing against itself, on the same side of the default map, they found one of them suffers an interesting decrease in performance.
+Even with this decrease, our players still won the game, but this helped us further improve the player.
+Their player, while not as performant, performed as expected both in simultaneous as in turn-by-turn mode.
 
 \subsection{Group 55 -- Mulders, Semerikova}
-\subsubsection{\fn{Player055Random}}
+\subsubsection{\fn{Player055Random.ozf}}
 While trying for interoperability with this group, we were reminded that our player is not allowed to place two bombs on the same tile.
 In order to fix this mistake, we had to rework the way the list of bombs is kept.
 Thinking about this also helped us to solve another issue we had when playing simultaneously; with the new design, our implementation was no longer specifically tailored to a certain game mode, i.e. turn-by-turn.
@@ -185,31 +249,45 @@ Since our \fn{Main.ozf} was very robust and did not actually need these values a
 Another issue we ran into while testing our players with this group was that after some rounds, our player would stop planting bombs, despite being under the right circumstances to do so.
 When investigating the code, this came down to a mismatch in specifications between the initialisation of the list of bombs and the \lstinline|case| statement trying to access it.
 
-\subsubsection{\fn{Player005Clever}}
+\subsubsection{\fn{Player055Survivor.ozf}}
+This test, on both controllers and with \fn{Player001Kardashian} as the opponent, worked well and allowed us to verify the correctness of our player.
+The game was played in turn-by-turn mode on their machine, and simultaneous mode on ours.
+
+\subsubsection{\fn{Player005Clever.ozf}}
 As we were playing a game against their advanced player, we suggested a different, more efficient approach.
 There were no bugs with their player or their controller, as far as we could see.
 
+\subsection{Group 100 -- Gevorgyan, Navarre}
+\subsubsection{Player100JonSnow.ozf}
+This player was tested in both modes against both of our more advanced players.
+\fn{Player001Turing.ozf} proved to be the better player, but this test led to some interesting discussions regarding the optimal way to search for points in a graph (comparing breadth-first search to iterative deepening depth-first search).
+
+\subsubsection{\fn{Player100advanced.ozf}}
+Using both controllers, this player was tested against both \fn{Player001Tao.ozf} and \fn{Player001Turing.ozf}.
+The latter won its games convincingly, and all four players worked perfectly on both controllers, in every mode.
+
+\subsection{Group 105 -- Maréchal, Martin}
+\subsubsection{UniMate interoperability platform}
+Our player \fn{Player001Turing.ozf} was tested on the interoperability platform on a variety of maps.
+While its score there was limited by the fact that our player is rather trigger-happy, this still showed that its algorithms are rather strong.
 
 \section{Extensions and optional parts}
+\label{sec:extensions}
 \IEEEPARstart{S}{ome} of the proposed extensions and improvements were implemented, and the authors added some of their own:
 \begin{itemize}
 	\item As explained in Section~\ref{sec:playerai}, one of our players,
 	\fn{Player001Turing.ozf}, uses a fairly advanced algorithm to determine its next action.
 	\item The GUI has been embellished to resemble the user interface of the Minecraft game.
 	\item The synchronization between the GUI and the controller has been automated, to avoid the game starting while the GUI is still loading.
+	\item Other options were added for the bonus, such as a malus of \(1\) point or the chance to gain an extra life.
 \end{itemize}
 
 \section{Conclusion}
-\IEEEPARstart{W}{orking} on this project has helped us to better understand
-
-\begin{thebibliography}{1}
-
-\bibitem{IEEEhowto:kopka}
-H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
-  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
-
-\end{thebibliography}
-
+\IEEEPARstart{W}{orking} on this project has helped us to better understand how to work with the multiple programming paradigms taught during the course.
+It introduced us to working with artificial intelligence on the players and algorithms.
+While the Oz language is arguably not the best choice for these kinds of tasks, some of its features such as records proved a great asset in writing clean, efficient and scalable code.
+Adding a simultaneous mode brought concurrency into the mix, which proved to be easier than we previously thought once we understood how to proceed with it.
+Finally, the opportunity to add extensions allowed us to let go of our creativity and try to make something visually appealing, while adding features to the game at the same time.
 
 \end{document}
 
