@@ -200,6 +200,7 @@ in
     * @param ?RetPos: unbound, set to SpawnPos (or null) by function.
     */
    fun {SpawnF Summary RetID RetSpawn}
+      % TODO fix raise
       if Summary.state == on then
          RetID = null
          RetSpawn = null
@@ -518,7 +519,7 @@ in
             RetResult = Summary.bombs + Option
             {AdjoinList Summary [bombs#RetResult]}
          [] point then
-            RetResult = Summary.score+1
+            RetResult = Summary.score+Option
             {AdjoinList Summary [score#RetResult]}
          else
             RetResult = 69

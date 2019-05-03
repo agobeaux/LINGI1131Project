@@ -125,21 +125,37 @@ It does not however hunt for points or bonuses, and can make wrong choices when 
 
 \subsubsection{Intelligent player}
 The intelligent player, \fn{Player001Turing.ozf}, builds further on what the advanced player does, by adding the ability to intelligently search for points and bonuses, with the latter being preferred in most cases.
+In order to track where points and bonuses are located, one has to take care of treating the \lstinline|boxRemoved(Pos)| messages.
 The algorithm is the following:
 \begin{itemize}
 	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
 	If multiple neighbours are equally safe, run a breadth-first search for points and one for bonuses.
 	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(2\) to work fairly well.}.
-	The next move on the path to 
-	\item If the player has bombs left, the player has a \SI{10}{\percent} chance to drop a bomb, and a \SI{90}{\percent} chance to move according to the algorithm above.
+	If there is a point target and no bonuses, the player moves towards it on the shortest path.
+	Finally, if there are no special targets, the player chooses a random neighbour from the safe options.
+	\item If the player has bombs left, it tries to place a bomb given that it is next to a box (in order to lay bare its content).
+	Otherwise, it moves towards a position according to the algorithm above.
 \end{itemize}
 
-\section{Interoperability}
+This strategy works very well, and consistently came out as one of the top AIs when competing with other teams.
 
-\section{Extensions}
+\section{Interoperability}
+In order to validate our implementation, we carried out interoperability tests with various groups.
+These tests helped us to identify misunderstandings in the project specification, as well as find some tricky bugs.
+
+\subsection{Group 55 -- Mulders, Semerikova}
+
+\section{Extensions and optional parts}
+Some of the proposed extensions and improvements were implemented:
+\begin{itemize}
+	\item As explained in Section~\ref{sec:playerai}, one of our players,
+	\fn{Player001Turing.ozf}, uses a fairly advanced algorithm to determine its next action.
+	\item The GUI has been embellished to resemble the user interface of the Minecraft game.
+	\item The synchronization between the GUI and the controller has been automated, to avoid the game starting while the GUI is still loading.
+\end{itemize}
 
 \section{Conclusion}
-The conclusion goes here.
+Working on this project
 
 \begin{thebibliography}{1}
 
