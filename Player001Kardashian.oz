@@ -27,27 +27,22 @@ define
 
    % Helper functions.
    UpdateMap
-
-   % Global immutable variables.
-   ID % Player's <bomber> ID.
-   SpawnPos % Spawn position of the player.
 in
    /**
     * Initializes the player and launches it.
     *
-    * @param FID: current player's <bomber> ID.
+    * @param ID: current player's <bomber> ID.
     */
-   fun {StartPlayer FID}
+   fun {StartPlayer ID}
       Stream Port OutputStream
    in
       thread % Filter to test validity of message sent to the player.
-         OutputStream = {Projet2019util.portPlayerChecker Name FID Stream}
+         OutputStream = {Projet2019util.portPlayerChecker Name ID Stream}
       end % thread
       {NewPort Stream Port}
       thread
          % The player is initially off the board and has no spawn position, until (assign)spawn.
-         ID = FID
-         {TreatStream OutputStream summary(state:off lives:Input.nbLives pos:null bombs:Input.nbBombs map:Input.Map score:0)}
+         {TreatStream OutputStream summary(state:off id:ID lives:Input.nbLives pos:null sppos:nil bombs:Input.nbBombs map:Input.map score:0)}
       end % thread
       Port
    end % fun StartPlayer
@@ -59,7 +54,7 @@ in
     * @param  ?RetID: unbound, set to ID by function.
     */
    fun {GetId Summary ?RetID}
-      RetID = ID
+      RetID = Summary.id
       Summary
    end % fun GetId
 
@@ -71,7 +66,7 @@ in
     * @param ?RetState: unbound, set to State by function.
     */
    fun {GetState Summary ?RetID ?RetState}
-      RetID = ID
+      RetID = Summary.id
       RetState = Summary.state
       Summary
    end % fun GetState
@@ -83,12 +78,7 @@ in
     * @param   SpPos: Spawn position of the current player.
     */
    fun {AssignSpawn Summary SpPos}
-      if {Value.isDet SpawnPos} then
-         raise('Spawn position already set in AssignSpawn.') end
-      else
-         SpawnPos = SpPos
-      end % if
-      Summary
+      {AdjoinList Summary [sppos#SpPos]}
    end % fun AssignSpawn
 
    /**
@@ -105,16 +95,16 @@ in
       if Summary.state == on then
          RetID = null
          RetSpawn = null
-         raise('Tried spawning a player that was already on the board in SpawnF.') end
+         Summary
       elseif Summary.lives =< 0 then
          RetID = null
          RetSpawn = null
-         raise('No more lives left in SpawnF.') end
+         Summary
       else
-         RetID = ID
-         RetSpawn = SpawnPos
+         RetID = Summary.id
+         RetSpawn = Summary.sppos
+         {AdjoinList Summary [state#on pos#RetSpawn score#0]}
       end % if
-      Summary
    end % fun SpawnF
 
    /**
@@ -130,7 +120,7 @@ in
          RetAction = null
          raise('Off-board player tried to perform an action in DoAction.') end
          Summary
-      elseif Summary.bombs > 0 andthen {OS.rand} mod 10 > 8 then
+      elseif Summary.bombs =< 0 orelse {OS.rand} mod 10 < 9 then
          local CircularNext MoveDir Available Pick NewPos in
             /**
             * Determine whether a given move is legal.
@@ -138,14 +128,14 @@ in
             * @param Dir: queried direction.
             */
             fun {MoveDir Dir}
-               if Dir == xplus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x+1} == 1 then ok
-               elseif Dir == xminus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x-1} == 1 then ok
-               elseif Dir == yplus andthen {Nth {Nth Summary.map Summary.pos.y+1} Summary.pos.x} == 1 then ok
-               elseif Dir == yminus andthen {Nth {Nth Summary.map Summary.pos.y-1} Summary.pos.x} == 1 then ok
+               if Dir == xplus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x+1} mod 4 == 0 then ok
+               elseif Dir == xminus andthen {Nth {Nth Summary.map Summary.pos.y} Summary.pos.x-1} mod 4 == 0 then ok
+               elseif Dir == yplus andthen {Nth {Nth Summary.map Summary.pos.y+1} Summary.pos.x} mod 4 == 0 then ok
+               elseif Dir == yminus andthen {Nth {Nth Summary.map Summary.pos.y-1} Summary.pos.x} mod 4 == 0 then ok
                else ko
                end % if
             end % fun MoveDir
-            Available = {MoveDir xplus}|{MoveDir xminus}|{MoveDir yplus}|{MoveDir yminus}
+            Available = {MoveDir xplus}|{MoveDir xminus}|{MoveDir yplus}|{MoveDir yminus}|nil
             
             Pick = {OS.rand} mod 4 + 1
             /**
@@ -172,14 +162,16 @@ in
             [] 4 then NewPos = pt(x:Summary.pos.x y:Summary.pos.y-1)
             end % case
 
-            RetID = ID
+            RetID = Summary.id
             RetAction = move(NewPos)
-            summary(state:Summary.state lives:Summary.lives pos:NewPos bombs:Summary.bombs map:Summary.map score:Summary.score)
+            {System.show 'Hmmmm'}
+            {AdjoinList Summary [pos#NewPos]}
          end % local
       else
-         RetID = ID
+         RetID = Summary.id
          RetAction = bomb(Summary.pos)
-         summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs-1 map:Summary.map score:Summary.score)
+         {System.show 'Hmmmm2'}
+         {AdjoinList Summary [bombs#Summary.bombs-1]}
       end % if
    end % fun DoAction
 
@@ -200,10 +192,10 @@ in
          case Type
          of bomb then
             RetResult = Summary.bombs + Option
-            summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs+Option map:Summary.map score:Summary.score)
+            {AdjoinList Summary [bombs#Summary.bombs+Option]}
          [] point then
             RetResult = Summary.score+1
-            summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs map:Summary.map score:Summary.score+1)
+            {AdjoinList Summary [score#Summary.score+1]}
          else
             RetResult = 69
             raise('Unknown type in Add.') end
@@ -231,9 +223,9 @@ in
          raise('Dead player received gotHit message in GotHit.') end
          Summary
       else
-         RetID = ID
+         RetID = Summary.id
          RetResult = death(Summary.lives-1)
-         summary(state:off lives:Summary.lives-1 pos:Summary.pos bombs:Summary.bombs map:Summary.map score:Summary.score)
+         {AdjoinList Summary [state#off lives#Summary.lives-1]}
       end % if
    end % fun GotHit
 
@@ -297,7 +289,7 @@ in
       [] bombExploded(BEPos) then
          Summary
       [] boxRemoved(BRPos) then
-         summary(state:Summary.state lives:Summary.lives pos:Summary.pos bombs:Summary.bombs map:{UpdateMap Map BRPos.x BRPos.y 1} score:Summary.score)
+         {AdjoinList Summary [map#{UpdateMap Summary.map BRPos.x BRPos.y 0}]}
       end % case Message
    end % fun Info
 

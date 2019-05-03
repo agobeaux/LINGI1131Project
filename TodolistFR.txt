@@ -53,13 +53,13 @@ TODO IMPORTANT : vérifier que ça fonctionne bien, que le jeu finit bien s'il n
 
 ULTRA IMPORTANT : INTEROPERABILITE !!!
 
-- Créer un player plus avancé : TODO
+- Créer un player plus avancé : OK
 - Interopérabilité avec player de base et avec players d'autres groupes (5 tests de min 3 groupes différents)
 
 "Optional but somewhat required part" : pas limités à ça mais on peut faire ceci :
 - Créer des bonus spéciaux : TODO
 - Tuner le GUI : TODO
-- Players plus intelligents : TODO
+- Players plus intelligents : OK
 - Players contrôlables par clavier : TODO + leur permettre de changer d'avis ! ça serait cool, suffit de créer un stream et le process tant qu'il y a qqch et return à chaque fois le dernier truc en faisant attention au temps ou qqch du genre
 - Faire une bonne suite de tests pour notre projet : TODO (vraiment important pour prouver qu'il fonctionne bien comme on veut)
 - "Initiate and lead a sharing platform for compiled agents" : C'est ce que Nicolas Van de Walle a fait non ? Pour se partager les players.ozf
