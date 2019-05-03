@@ -48,9 +48,9 @@ in
 
 %%%% Players description %%%%
 
-   NbBombers = 2
-   Bombers = [turing tao]
-   ColorBombers = [orange red]
+   NbBombers = 4
+   Bombers = [turing player055survivor turing player055survivor]
+   ColorBombers = [red orange pink green]
 
 %%%% Parameters %%%%
 
