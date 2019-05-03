@@ -316,6 +316,7 @@ in
 	         {TreatStream T Grid Players}
          [] displayWinner(ID) then
 	         {Browser.browse 'the winner is '#ID}
+            {TreatStream T Grid Players}
          else
 	         {Browser.browse 'unsupported message'#H}
 	         {TreatStream T Grid Players}

@@ -28,8 +28,30 @@ TODO IMPORTANT : vérifier que ça fonctionne bien, que le jeu finit bien s'il n
 
 - Jeu simultané : adaptation : TODO
 
-- Feu qui traverse les players (et vérifier que ça double kill pas) : TODO
-- Explosion de la bombe avant l'action du joueur : TODO : soit mettre nbTurn-1 pour le faire après le mouvement du joueur avant, soit remettre l'explosion avant ?
+- Feu qui traverse les players (et vérifier que ça double kill pas) : OK
+- Explosion de la bombe avant l'action du joueur (attention au changement de map) : OK
+- Bombes : réactions en chaîne (changer la case des maps (rajouter des chiffres)) : TODO
+- Régler le bug du GUI qui se redimensionne chez moi : TODO
+- Gérer plusieurs winners : OK
+- Process les bombes même si pas de doAction en simultané : OK (Record.waitOr)
+- Gérer le respawn différemment : respawn direct ! (après l'explosion attention... Check ce cas dans le simultané aussi) : OK
+- Condition d'arrêt de thread en simultané : OK (bind de variables)
+- Simultané : delay pour les hidefire : OK (var DelayHideF en [ms])
+- Trouver une solution aux NOK car demande de doAction au player Dead (problème à cause de la concurrence, pas atomique de demander le state puis le doAction... Un lock pourrait être sympa j'imagine mais je sais pas si on peut l'utiliser) : TODO
+- Stream des positions -> Liste
+- Renommer correctement variables (nom + stream/liste cohérence)
+- Merge TurnByTurn et Simulatenous
+- LivesList : vraiment une liste plutôt qu'un stream ?
+- HideFPort : var globale : OK
+- Players : ThinkMin ThinkMax : thread {Delay XXX} Action = YYY end : TODO WARNING : ONLY IN SIMULTANEOUS
+- Dcoumenter le code : TODO
+- Map custom : TODO
+- Bonus qui fait -1 à tout le monde sauf à celui qui le prend et ça donne +1 ?
+- GERER LES EXTENSIONS AVEC USEEXTENSION !!
+- changer le nom de debug des joueurs ozf
+- PrintOK VARIABLE : pour dire s'il faut print que les erreurs (false) ou tout print
+
+ULTRA IMPORTANT : INTEROPERABILITE !!!
 
 - Créer un player plus avancé : TODO
 - Interopérabilité avec player de base et avec players d'autres groupes (5 tests de min 3 groupes différents)
