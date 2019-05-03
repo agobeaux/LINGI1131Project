@@ -77,28 +77,24 @@ in
    end % fun SetNth
 
    /**
-    * Update the list of bombs after a turn has passed.
+    * Update the list of bombs when a bomb has exploded.
     *
     * @param BombList: list of bombs.
     */
-   fun {UpdateBombs BombList}
+   fun {UpdateBombs BombList Pos}
       fun {DoUpdateBombs BombList Acc}
          case BombList
          of nil then
             Acc
-         [] bomb(pos:P time:Time)|T then
-            if Time == 0 then
-               {DoUpdateBombs T Acc}
+         [] bomb(pos:P)|T then
+            if P == Pos then
+               {Append Acc T}
             else
-               {DoUpdateBombs T {Append Acc [bomb(pos:P time:Time-1)]}}
+               {DoUpdateBombs T {Append Acc [bomb(pos:P)]}}
             end % if
-         [] bomb(pos:P time:T) then
-            if Time == 0 then
-               Acc
-            else
-               {Append Acc [bomb(pos:P time:T)]}
-            end % if
-         end % case BombList
+         else
+            raise('UpdateBombs : pattern not recognized :'#BombList) end
+         end
       end % fun DoUpdateBombs
    in
       {DoUpdateBombs BombList nil}
@@ -264,14 +260,7 @@ in
          case BombList
          of nil then
             Map
-         [] bomb(pos:P time:T) then
-            case P
-            of pt(x:X y:Y) then
-               {UpdateDMap Summary.map Map X Y 0 all}
-            else
-             raise('Invalid pattern in DangerMap.') end
-            end % case P
-         [] bomb(pos:P time:T)|Xr then
+         [] bomb(pos:P)|Xr then
             case P
             of pt(x:X y:Y) then
                {DoDangerMap {UpdateDMap Summary.map Map X Y 0 all} Xr}
@@ -321,46 +310,46 @@ in
    /**
     * Determine what action the player should perform.
     * 
-    * @param OldSummary: summary of the game.
+    * @param    Summary: summary of the game.
     * @param     ?RetID: unbound, set to ID (or null) by function.
     * @param ?RetAction: unbound, set to the action the player should perform (or null) by function.
     */
-   fun {DoAction OldSummary RetID RetAction}
-      local Summary in 
-         Summary = {AdjoinList OldSummary [mapbombs#{UpdateBombs OldSummary.mapbombs}]}
-         if Summary.state == off then
-            RetID = null
-            RetAction = null
-            {System.show 'Off-board player tried to perform an action in DoAction.'}
-            Summary
-         elseif Summary.bombs =< 0 orelse {OS.rand} mod 10 < 9 then
-            local DMap X Y Up Down Left Right Prio NewRec NewPos in
-               if Summary.pos \= nil then 
-                  X = Summary.pos.x
-                  Y = Summary.pos.y
-                  DMap = {DangerMap Summary}
+   fun {DoAction Summary RetID RetAction}
+      if Summary.state == off then
+         RetID = null
+         RetAction = null
+         {System.show 'Off-board player tried to perform an action in DoAction.'}
+         Summary
+      elseif Summary.bombs =< 0 orelse {OS.rand} mod 10 < 9 then
+         local DMap X Y Up Down Left Right Prio NewRec NewPos in
+            if Summary.pos \= nil then
+               RetID = Summary.id
+               X = Summary.pos.x
+               Y = Summary.pos.y
+               DMap = {DangerMap Summary}
 
-                  Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
-                  Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
-                  Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
-                  Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
+               Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
+               Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
+               Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
+               Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
 
-                  Prio = {RemoveBad [Up Down Left Right] Summary.map}
-                  NewRec = {BestMove Prio}
-                  NewPos = pt(x:NewRec.x y:NewRec.y)
+               Prio = {RemoveBad [Up Down Left Right] Summary.map}
+               NewRec = {BestMove Prio}
+               NewPos = pt(x:NewRec.x y:NewRec.y)
 
-                  RetAction = move(NewPos)
-                  {AdjoinList Summary [pos#NewPos]}
-               else
-                  Summary
-               end % if
-            end % local
-         else
-            RetID = Summary.id
-            RetAction = bomb(Summary.pos)
-            {AdjoinList Summary [bombs#Summary.bombs-1]}
-         end % if
-      end % local
+               RetAction = move(NewPos)
+               {AdjoinList Summary [pos#NewPos]}
+            else
+               RetID = null
+               RetAction = null
+               Summary
+            end % if
+         end % local
+      else
+         RetID = Summary.id
+         RetAction = bomb(Summary.pos)
+         {AdjoinList Summary [bombs#Summary.bombs-1]}
+      end % if
    end % fun DoAction
 
    /**
@@ -402,12 +391,12 @@ in
    fun {GotHit Summary RetID RetResult}
       if Summary.state == off then
          RetID = null
-         RetResult = off
+         RetResult = null
          {System.show 'Off-board player received gotHit message in GotHit.'}
          Summary
       elseif Summary.lives =< 0 then
          RetID = null
-         RetResult = off
+         RetResult = null
          {System.show 'Dead player received gotHit message in GotHit.'}
          Summary
       else NewLives in
@@ -434,11 +423,11 @@ in
          Summary
       [] bombPlanted(BPPos) then
          local NewBombList in
-            NewBombList = {Append Summary.mapbombs [bomb(pos:BPPos time:Input.timingBomb)]}
+            NewBombList = {Append Summary.mapbombs [bomb(pos:BPPos)]}
             {AdjoinList Summary [mapbombs#NewBombList]}
          end % local
       [] bombExploded(BEPos) then
-         Summary
+         {AdjoinList Summary [mapbombs#{UpdateBombs Summary.mapbombs BEPos}]}
       [] boxRemoved(BRPos) then
          local NewMap in
             NewMap = {UpdateMap Summary.map BRPos.x BRPos.y 0}

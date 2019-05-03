@@ -130,7 +130,7 @@ The algorithm is the following:
 \begin{itemize}
 	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
 	If multiple neighbours are equally safe, run a breadth-first search for points and one for bonuses.
-	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(2\) to work fairly well.}.
+	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(3\) to work fairly well.}.
 	If there is a point target and no bonuses, the player moves towards it on the shortest path.
 	Finally, if there are no special targets, the player chooses a random neighbour from the safe options.
 	\item If the player has bombs left, it tries to place a bomb given that it is next to a box (in order to lay bare its content).
@@ -144,6 +144,15 @@ In order to validate our implementation, we carried out interoperability tests w
 These tests helped us to identify misunderstandings in the project specification, as well as find some tricky bugs.
 
 \subsection{Group 55 -- Mulders, Semerikova}
+While trying for interoperability with this group, we were reminded that our player is not allowed to place two bombs on the same tile.
+In order to fix this mistake, we had to rework the way the list of bombs is kept.
+Thinking about this also helped us to solve another issue we had when playing simultaneously; with the new design, our implementation was no longer specifically tailored to a certain game mode, i.e. turn-by-turn.
+Another error we found is that the advanced players did not always bind an ID when returning an Action.
+Since our \fn{Main.ozf} was very robust and did not actually need these values as they were being kept track of, the error never showed on our own computers.
+
+Another issue we ran into while testing our players with this group was that after some rounds, our player would stop planting bombs, despite being under the right circumstances to do so.
+When investigating the code, this came down to a mismatch in specifications between the initialisation of the list of bombs and the \lstinline|case| statement trying to access it.
+
 
 \section{Extensions and optional parts}
 Some of the proposed extensions and improvements were implemented:
@@ -155,7 +164,7 @@ Some of the proposed extensions and improvements were implemented:
 \end{itemize}
 
 \section{Conclusion}
-Working on this project
+Working on this project has helped us to better understand
 
 \begin{thebibliography}{1}
 

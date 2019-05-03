@@ -86,31 +86,23 @@ in
    end % fun SetNth
 
    /**
-    * Update the list of bombs after a turn has passed.
+    * Update the list of bombs when a bomb has exploded.
     *
     * @param BombList: list of bombs.
     */
-   fun {UpdateBombs BombList}
+   fun {UpdateBombs BombList Pos}
       fun {DoUpdateBombs BombList Acc}
          case BombList
          of nil then
             Acc
-         [] bomb(pos:P time:Time)|T then
-            if Time == 0 then
-               {DoUpdateBombs T Acc}
+         [] bomb(pos:P)|T then
+            if P == Pos then
+               {Append Acc T}
             else
-               {DoUpdateBombs T {Append Acc [bomb(pos:P time:Time-1)]}}
+               {DoUpdateBombs T {Append Acc [bomb(pos:P)]}}
             end % if
-         /*
-         [] bomb(pos:P time:T) then
-            if Time == 0 then
-               Acc
-            else
-               {Append Acc [bomb(pos:P time:T)]}
-            end % if
-         end % case BombList
-         */
-         else raise('UpdateBombs : pattern not recognized :'#BombList) end
+         else
+            raise('UpdateBombs : pattern not recognized :'#BombList) end
          end
       end % fun DoUpdateBombs
    in
@@ -273,20 +265,8 @@ in
          case BombList
          of nil then
             Map
-         [] bomb(pos:P time:T) then
-            case P
-            of pt(x:X y:Y) then
-               {UpdateDMap Summary.map Map X Y 0 all}
-            else
-             raise('Invalid pattern in DangerMap.') end
-            end % case P
-         [] bomb(pos:P time:T)|Xr then
-            case P
-            of pt(x:X y:Y) then
-               {DoDangerMap {UpdateDMap Summary.map Map X Y 0 all} Xr}
-            else
-             raise('Invalid pattern in DangerMap.') end
-            end % case P
+         [] bomb(pos:pt(x:X y:Y))|Xr then
+            {DoDangerMap {UpdateDMap Summary.map Map X Y 0 all} Xr}
          end % case BombList
       end % fun DoDangerMap
    in
@@ -409,100 +389,102 @@ in
    /**
     * Determine what action the player should perform.
     * 
-    * @param OldSummary: summary of the game.
+    * @param    Summary: summary of the game.
     * @param     ?RetID: unbound, set to ID (or null) by function.
     * @param ?RetAction: unbound, set to the action the player should perform (or null) by function.
     */
-   fun {DoAction OldSummary RetID RetAction}
-      local Summary in 
-         Summary = {AdjoinList OldSummary [bomblist#{UpdateBombs OldSummary.bomblist}]}
-         if Summary.state == off then
-            RetID = null
-            RetAction = null
-            {System.show 'Off-board player tried to perform an action in DoAction.'}
-            Summary
-         elseif Summary.bombs =< 0 then
-            local DMap X Y Up Down Left Right Prio NewRec NewPos BFSPoint BFSBonus in
-               if Summary.pos \= nil then 
-                  X = Summary.pos.x
-                  Y = Summary.pos.y
-                  DMap = {DangerMap Summary}
-
-                  Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
-                  Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
-                  Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
-                  Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
-
-                  Prio = {RemoveBad [Up Down Left Right] Summary.map}
-                  BFSBonus = {BFS Summary.map pt(x:X y:Y) 6}
-                  BFSPoint = {BFS Summary.map pt(x:X y:Y) 5}
-
-                  if BFSBonus == notarget andthen BFSPoint == notarget then
-                     NewRec = {BestMove Prio {RandomNeighbour X Y}}
-                  elseif BFSBonus == notarget then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
-                  elseif BFSPoint == notarget then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
-                  elseif BFSBonus > 2 * BFSPoint then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
-                  else
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
-                  end % if
-                  NewPos = pt(x:NewRec.x y:NewRec.y)
-
-                  RetAction = move(NewPos)
-                  {AdjoinList Summary [pos#NewPos]}
-               else
-                  Summary
-               end % if
-            end % local
-         else DMap X Y UpM DownM LeftM RightM in
+   fun {DoAction Summary RetID RetAction}
+      if Summary.state == off then
+         RetID = null
+         RetAction = null
+         {System.show 'Off-board player tried to perform an action in DoAction.'}
+         Summary
+      elseif Summary.bombs =< 0 then
+         local DMap X Y Up Down Left Right Prio NewRec NewPos BFSPoint BFSBonus in
             if Summary.pos \= nil then 
+               RetID = Summary.id
                X = Summary.pos.x
                Y = Summary.pos.y
                DMap = {DangerMap Summary}
 
-               UpM = rec(x:X y:Y-1 val:{Nth {Nth Summary.map Y-1} X})
-               DownM = rec(x:X y:Y+1 val:{Nth {Nth Summary.map Y+1} X})
-               LeftM = rec(x:X-1 y:Y val:{Nth {Nth Summary.map Y} X-1})
-               RightM = rec(x:X+1 y:Y val:{Nth {Nth Summary.map Y} X+1})
+               Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
+               Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
+               Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
+               Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
 
-               if {NextToBox [UpM DownM LeftM RightM] [2 3]} then
-                  RetID = Summary.id
-                  RetAction = bomb(Summary.pos)
-                  {AdjoinList Summary [bombs#Summary.bombs-1]}
-               else Up Down Left Right Prio NewRec NewPos BFSPoint BFSBonus in
-                  Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
-                  Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
-                  Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
-                  Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
+               Prio = {RemoveBad [Up Down Left Right] Summary.map}
+               BFSBonus = {BFS Summary.map pt(x:X y:Y) 6}
+               BFSPoint = {BFS Summary.map pt(x:X y:Y) 5}
 
-                  Prio = {RemoveBad [Up Down Left Right] Summary.map}
-                  BFSBonus = {BFS Summary.map pt(x:X y:Y) 6}
-                  BFSPoint = {BFS Summary.map pt(x:X y:Y) 5}
-
-                  if BFSBonus == notarget andthen BFSPoint == notarget then
-                     NewRec = {BestMove Prio {RandomNeighbour X Y}}
-                  elseif BFSBonus == notarget then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
-                  elseif BFSPoint == notarget then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
-                  elseif BFSBonus > 2 * BFSPoint then
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
-                  else
-                     NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
-                  end % if
-                  NewPos = pt(x:NewRec.x y:NewRec.y)
-
-                  RetAction = move(NewPos)
-                  {AdjoinList Summary [pos#NewPos]}
+               if BFSBonus == notarget andthen BFSPoint == notarget then
+                  NewRec = {BestMove Prio {RandomNeighbour X Y}}
+               elseif BFSBonus == notarget then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
+               elseif BFSPoint == notarget then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
+               elseif BFSBonus > 2 * BFSPoint then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
+               else
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
                end % if
+               NewPos = pt(x:NewRec.x y:NewRec.y)
+
+               RetAction = move(NewPos)
+               {AdjoinList Summary [pos#NewPos]}
             else
+               RetID = null
+               RetAction = null
                Summary
             end % if
-         end % if
+         end % local
+      else DMap X Y UpM DownM LeftM RightM in
+         if Summary.pos \= nil then 
+            RetID = Summary.id
+            X = Summary.pos.x
+            Y = Summary.pos.y
+            DMap = {DangerMap Summary}
 
-      end % local
+            UpM = rec(x:X y:Y-1 val:{Nth {Nth Summary.map Y-1} X})
+            DownM = rec(x:X y:Y+1 val:{Nth {Nth Summary.map Y+1} X})
+            LeftM = rec(x:X-1 y:Y val:{Nth {Nth Summary.map Y} X-1})
+            RightM = rec(x:X+1 y:Y val:{Nth {Nth Summary.map Y} X+1})
+
+            if {NextToBox [UpM DownM LeftM RightM] [2 3]} andthen {Not {List.member bomb(pos:pt(x:X y:Y)) Summary.bomblist}} then
+               RetID = Summary.id
+               RetAction = bomb(Summary.pos)
+               {AdjoinList Summary [bombs#Summary.bombs-1]}
+            else Up Down Left Right Prio NewRec NewPos BFSPoint BFSBonus in
+               Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
+               Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
+               Left = rec(x:X-1 y:Y val:{Nth {Nth DMap Y} X-1})
+               Right = rec(x:X+1 y:Y val:{Nth {Nth DMap Y} X+1})
+
+               Prio = {RemoveBad [Up Down Left Right] Summary.map}
+               BFSBonus = {BFS Summary.map pt(x:X y:Y) 6}
+               BFSPoint = {BFS Summary.map pt(x:X y:Y) 5}
+
+               if BFSBonus == notarget andthen BFSPoint == notarget then
+                  NewRec = {BestMove Prio {RandomNeighbour X Y}}
+               elseif BFSBonus == notarget then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
+               elseif BFSPoint == notarget then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
+               elseif BFSBonus > 3 * BFSPoint then
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 5 BFSPoint}}
+               else
+                  NewRec = {BestMove Prio {BFSNeighbours Summary.map X Y 6 BFSBonus}}
+               end % if
+               NewPos = pt(x:NewRec.x y:NewRec.y)
+
+               RetAction = move(NewPos)
+               {AdjoinList Summary [pos#NewPos]}
+            end % if
+         else
+            RetID = null
+            RetAction = null
+            Summary
+         end % if
+      end % if
    end % fun DoAction
 
    /**
@@ -513,7 +495,7 @@ in
     * @param     Option: the value of the item.
     * @param ?RetResult: unbound, new value of the counter.
     */
-   fun {Add Summary Type Option RetResult}
+   fun {Add Summary Type Option ?RetResult}
       if Summary.state == off then
          RetResult = Summary.score
          {System.show 'Tried adding item to off-board player in Add.'}
@@ -580,11 +562,11 @@ in
          Summary
       [] bombPlanted(BPPos) then
          local NewBombList in
-            NewBombList = {Append Summary.bomblist [bomb(pos:BPPos time:Input.timingBomb)]}
+            NewBombList = {Append Summary.bomblist [bomb(pos:BPPos)]}
             {AdjoinList Summary [bomblist#NewBombList]}
          end % local
       [] bombExploded(BEPos) then
-         Summary
+         {AdjoinList Summary [bomblist#{UpdateBombs Summary.bomblist BEPos}]}
       [] boxRemoved(BRPos) then
          local NewMap in
             case {Nth {Nth Summary.map BRPos.y} BRPos.x}
