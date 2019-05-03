@@ -34,6 +34,17 @@ define
 
    StateModification
 
+   % Images definition :
+   ObsiWall = {QTk.newImage photo(file:'./img/obsidian.gif' height:50 width:50)}
+   Chest = {QTk.newImage photo(file:'./img/normalchest.gif' height:50 width:50)}
+   SpecialChest = {QTk.newImage photo(file:'./img/netherchest.gif' height:50 width:50)}
+   PointIcon = {QTk.newImage photo(file:'./img/gold.gif' height:50 width:50)}
+   BonusIcon = {QTk.newImage photo(file:'./img/diamond.gif' height:50 width:50)}
+   Grass = {QTk.newImage photo(file:'./img/grass.gif' height:50 width:50)}
+   Glass = {QTk.newImage photo(file:'./img/glass.gif' height:50 width:50)}
+   BombIcon = {QTk.newImage photo(file:'./img/creeper.gif' height:50 width:50)}
+   Lava = {QTk.newImage photo(file:'./img/lava.gif' height:50 width:50)}
+
 in
 
 %%%%% Build the initial window and set it up (call only once)
@@ -82,18 +93,18 @@ in
 
    
 %%%%% Squares of path and wall
-   Squares = square(0:label(text:"" width:1 height:1 bg:c(0 0 204))
-		    1:label(text:"" borderwidth:5 relief:raised width:1 height:1 bg:c(0 0 0))
-		    2:label(text:"" width:1 height:1 bg:c(0 0 204))
-		    3:label(text:"" width:1 height:1 bg:c(0 0 204))
-		    4:label(text:"" width:1 height:1 bg:c(0 150 150))
+   Squares = square(0:label(image:Grass width:1 height:1 bg:c(0 0 204))
+		    1:label(image:ObsiWall borderwidth:5 relief:raised width:1 height:1 bg:c(0 0 0))
+		    2:label(image:Grass width:1 height:1 bg:c(0 0 204))
+		    3:label(image:Grass width:1 height:1 bg:c(0 0 204))
+		    4:label(image:Glass width:1 height:1 bg:c(0 150 150))
 		   )
-   Items = items(boxpoint:fun{$ Handle} label(text:"" borderwidth:2 relief:raised width:3 height:2 bg:c(139 69 19) handle:Handle) end 
-		 boxbonus:fun{$ Handle} label(text:"" borderwidth:2 relief:raised width:3 height:2 bg:c(210 105 30) handle:Handle) end 
-		 point:fun{$ Handle} label(text:"" height:1 width:1 handle:Handle bg:white) end 
-		 bonus:fun{$ Handle} label(text:"" height:1 width:1 handle:Handle bg:green) end 
-		 bomb:fun{$ Handle} label(text:"" height:1 width:1 handle:Handle bg:black) end 
-		 fire:fun{$ Handle} label(text:"" height:1 width:2 handle:Handle bg:red) end 
+   Items = items(boxpoint:fun{$ Handle} label(image:Chest borderwidth:2 relief:raised width:30 height:30 bg:c(139 69 19) handle:Handle) end 
+		 boxbonus:fun{$ Handle} label(image:SpecialChest borderwidth:2 relief:raised width:30 height:30 bg:c(210 105 30) handle:Handle) end 
+		 point:fun{$ Handle} label(image:PointIcon height:30 width:30 handle:Handle bg:green) end 
+		 bonus:fun{$ Handle} label(image:BonusIcon height:30 width:30 handle:Handle bg:green) end 
+		 bomb:fun{$ Handle} label(image:BombIcon height:30 width:30 handle:Handle bg:black) end 
+		 fire:fun{$ Handle} label(image:Lava height:40 width:40 handle:Handle bg:green) end 
 		)
    
 %%%%% Function to draw the map
