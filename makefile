@@ -40,7 +40,7 @@ run:
 
 zip:
 	rm -rf project.zip
-	zip -r project.zip GUI.oz Main.oz PlayerManager.oz Player001*.oz Input.oz makefile img/
+	zip -r project.zip GUI.oz Main.oz PlayerManager.oz Player001*.oz Input.oz makefile img/*.gif
 
 clean: # Delete every file except .ozf for which we don't have .oz files
 	ls *.ozf | grep -v Player000bomber.ozf | grep -v Projet2019util.ozf | xargs rm
