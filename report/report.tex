@@ -1,0 +1,99 @@
+\documentclass[12pt,journal]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{mathtools}
+\usepackage{array}
+\usepackage{dblfloatfix}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{inconsolata}
+
+\usepackage{color}
+\definecolor{bluekeywords}{rgb}{0.13,0.13,1}
+\definecolor{greencomments}{rgb}{0,0.5,0}
+\definecolor{redstrings}{rgb}{0.9,0,0}
+
+\usepackage{listings}
+\lstset{language=Oz,
+	showspaces=false,
+	showtabs=false,
+	breaklines=true,
+	showstringspaces=false,
+	breakatwhitespace=true,
+	escapeinside={(*@}{@*)},
+	commentstyle=\color{greencomments},
+	keywordstyle=\color{bluekeywords},
+	stringstyle=\color{redstrings},
+	basicstyle=\ttfamily
+}
+
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+\title{Ozploding bozmbs -- Bomberman in Oz}
+\author{Alexandre Gobeaux and Gilles Peiffer%
+\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem Alexandre Gobeaux -- 42191600\protect\\
+E-mail: \href{mailto:gilles.peiffer@student.uclouvain.be}{gilles.peiffer@student.uclouvain.be}%
+\IEEEcompsocthanksitem Gilles Peiffer -- 24321600 \protect\\
+E-mail: \href{mailto:gilles.peiffer@student.uclouvain.be}{gilles.peiffer@student.uclouvain.be}}
+}
+
+\markboth{Ozploding bozmbs -- Bomberman in Oz}%
+{Alexandre Gobeaux and Gilles Peiffer}
+
+
+\IEEEtitleabstractindextext{%
+\begin{abstract}
+In this paper, the methodology and design choices behind our implementation of the Bomberman game in Oz are given.
+Both the turn-by-turn part of the game controller as its simultaneous part are explained, and an attempt is made to clarify why the authors took certain decisions with regards to how the final product works.
+On top of that, an algorithm was implemented in order to control the players' moves, reacting to various messages it receives containing either requests or information about the game.
+This was done in at various levels of complexity, building increasingly efficient players.
+On top of the mandatory parts of the project, various supplementary features and embellishments are also included in the implementation.
+
+In order to validate our product, interoperability tests were also carried out with both the reference player and other teams' players.
+This paper presents a brief summary of the results of these tests.
+\end{abstract}
+}
+
+
+\maketitle
+
+\IEEEdisplaynontitleabstractindextext
+
+\section{Introduction}
+
+\IEEEPARstart{B}{omberman} is a famous game.
+
+\section{Controller structure}
+
+\subsection{Turn-by-turn controller}
+
+\subsection{Simultaneous controller}
+
+\section{Player structure}
+
+\subsection{General structure}
+\IEEEPARstart{P}{layers} have to respond to different messages they can get from the controller.
+In order to handle each of these messages, multiple so-called ``handler functions'' were created, one for each possible message.
+One also has to store all relevant information about a player, such as its state, ID, number of lives, position on the board, etc.; in order to do this in a clean manner, the authors opted to use record structures, which can easily be modified with the \lstinline|AdjoinList| function.
+
+\section{Interoperability}
+
+\section{Extensions}
+
+\section{Conclusion}
+The conclusion goes here.
+
+\begin{thebibliography}{1}
+
+\bibitem{IEEEhowto:kopka}
+H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
+  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
+
+\end{thebibliography}
+
+
+\end{document}
+
+
