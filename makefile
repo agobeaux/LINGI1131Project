@@ -15,7 +15,7 @@ X = ozengine
 endif
 
 all:
-	# make clean
+	make clean
 	make compileAll
 	make run
 

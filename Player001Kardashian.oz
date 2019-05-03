@@ -118,7 +118,7 @@ in
       if Summary.state == off then
          RetID = null
          RetAction = null
-         raise('Off-board player tried to perform an action in DoAction.') end
+         {System.show 'Off-board player tried to perform an action in DoAction.'}
          Summary
       elseif Summary.bombs =< 0 orelse {OS.rand} mod 10 < 9 then
          local CircularNext MoveDir Available Pick NewPos in
@@ -170,7 +170,6 @@ in
       else
          RetID = Summary.id
          RetAction = bomb(Summary.pos)
-         {System.show 'Hmmmm2'}
          {AdjoinList Summary [bombs#Summary.bombs-1]}
       end % if
    end % fun DoAction
@@ -181,7 +180,7 @@ in
     * @param    Summary: summary of the game.
     * @param       Type: the type of the item.
     * @param     Option: the value of the item.
-    * @param ?RetResult: unobund, new value of the counter.
+    * @param ?RetResult: unbound, new value of the counter.
     */
    fun {Add Summary Type Option ?RetResult}
       if Summary.state == off then
@@ -214,13 +213,13 @@ in
    fun {GotHit Summary ?RetID ?RetResult}
       if Summary.state == off then
          RetID = null
-         RetResult = off
-         raise('Off-board player received gotHit message in GotHit.') end
+         RetResult = null
+         {System.show 'Off-board player received gotHit message in GotHit.'}
          Summary
       elseif Summary.lives =< 0 then
          RetID = null
-         RetResult = off
-         raise('Dead player received gotHit message in GotHit.') end
+         RetResult = null
+         {System.show 'Dead player received gotHit message in GotHit.'}
          Summary
       else
          RetID = Summary.id

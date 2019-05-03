@@ -204,15 +204,16 @@ in
     * @param ?RetPos: unbound, set to SpawnPos (or null) by function.
     */
    fun {SpawnF Summary RetID RetSpawn}
-      % TODO fix raise
       if Summary.state == on then
          RetID = null
          RetSpawn = null
-         raise('Tried spawning a player that was already on the board in SpawnF.') end
+         {System.show 'Tried spawning a player that was already on the board in SpawnF.'}
+         Summary
       elseif Summary.lives =< 0 then
          RetID = null
          RetSpawn = null
-         raise('No more lives left in SpawnF.') end
+         {Summary.show 'No more lives left in SpawnF.'}
+         Summary
       else
          RetID = Summary.id
          RetSpawn = Summary.sppos
@@ -418,7 +419,7 @@ in
          if Summary.state == off then
             RetID = null
             RetAction = null
-            raise('Off-board player tried to perform an action in DoAction.') end
+            {System.show 'Off-board player tried to perform an action in DoAction.'}
             Summary
          elseif Summary.bombs =< 0 then
             local DMap X Y Up Down Left Right Prio NewRec NewPos BFSPoint BFSBonus in

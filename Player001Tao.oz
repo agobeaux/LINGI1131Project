@@ -194,11 +194,13 @@ in
       if Summary.state == on then
          RetID = null
          RetSpawn = null
-         raise('Tried spawning a player that was already on the board in SpawnF.') end
+         {Summary.show 'Tried spawning a player that was already on the board in SpawnF.'}
+         Summary
       elseif Summary.lives =< 0 then
          RetID = null
          RetSpawn = null
-         raise('No more lives left in SpawnF.') end
+         {System.show 'No more lives left in SpawnF.'}
+         Summary
       else
          RetID = Summary.id
          RetSpawn = Summary.sppos
@@ -329,7 +331,7 @@ in
          if Summary.state == off then
             RetID = null
             RetAction = null
-            raise('Off-board player tried to perform an action in DoAction.') end
+            {System.show 'Off-board player tried to perform an action in DoAction.'}
             Summary
          elseif Summary.bombs =< 0 orelse {OS.rand} mod 10 < 9 then
             local DMap X Y Up Down Left Right Prio NewRec NewPos in
@@ -337,8 +339,6 @@ in
                   X = Summary.pos.x
                   Y = Summary.pos.y
                   DMap = {DangerMap Summary}
-                  {System.show 'DMap:'}
-                  {System.show DMap}
 
                   Up = rec(x:X y:Y-1 val:{Nth {Nth DMap Y-1} X})
                   Down = rec(x:X y:Y+1 val:{Nth {Nth DMap Y+1} X})
@@ -382,7 +382,7 @@ in
             RetResult = Summary.bombs + Option
             {AdjoinList Summary [bombs#RetResult]}
          [] point then
-            RetResult = Summary.score+1
+            RetResult = Summary.score+ Option
             {AdjoinList Summary [score#RetResult]}
          else
             RetResult = 69
@@ -403,12 +403,12 @@ in
       if Summary.state == off then
          RetID = null
          RetResult = off
-         raise('Off-board player received gotHit message in GotHit.') end
+         {System.show 'Off-board player received gotHit message in GotHit.'}
          Summary
       elseif Summary.lives =< 0 then
          RetID = null
          RetResult = off
-         raise('Dead player received gotHit message in GotHit.') end
+         {System.show 'Dead player received gotHit message in GotHit.'}
          Summary
       else NewLives in
          RetID = Summary.id
