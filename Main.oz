@@ -412,17 +412,22 @@ define
    fun {ProcessBonus PPlay Score}
       RandomValue
    in
+      {System.show 'In ProcessBonus function with PPlay#Score'#PPlay#Score}
       RandomValue = {OS.rand} mod 2
       case RandomValue
       of 0 then
          {Send PPlay add(bomb 1 _)}
+         {System.show 'In ProcessBonus  before returning Score'#Score}
          Score
       [] 1 then ID NewScore in
          {Send PPlay add(point 10 NewScore)}
          {Send PPlay getId(ID)}
+         {System.show 'before wait ID NewScore'}
          {Wait ID} % TODO : vraiment nécessaire ? ... Le ID n'était pas bound dans un cas...
          {Wait NewScore}
+         {System.show 'after wait ID NewScore'}
          {Send PGUI scoreUpdate(ID NewScore)}
+         {System.show 'In ProcessBonus  before returning NewScore'#NewScore}
          NewScore
       end
    end
@@ -450,6 +455,8 @@ define
                if {Or H==2 H==3} then % we have a point box or bonus box and we destroy it
                   NbChange = 1
                else NbChange = 0 end
+               {System.show 'BuildNewMap - NewRow : before returningvalue'}
+               {System.show 'Value|T : '#(Value|T)}
                Value|T % change into Value given
             else H|{NewRow T X ThisX+1}
             end
@@ -459,8 +466,10 @@ define
       fun {NewColumns Map X Y ThisY}
          {System.show 'in NewColumns'}
          case Map of H|T then
-            if ThisY == Y then % column which should change
-               {NewRow H X 1}|T
+            if ThisY == Y then Tmp in  % column which should change % TODO : delete Tmp
+               Tmp = {NewRow H X 1}
+               {System.show 'BuildNewMap - NewColumns : before returning'}
+               Tmp|T
             else H|{NewColumns T X Y ThisY+1}
             end
          else raise('Error in NewColumns function : Map != H|T') end
@@ -475,11 +484,14 @@ define
    end
 
    fun {GetElt PPlay List}
+      {System.show 'GetElt function, PPlay#List :'#PPlay#List}
       case List
       of (Port#Elt)|T then
-         if Port == PPlay then Elt
+         if Port == PPlay then
+            {System.show 'GetElt function : before returning Elt'#Elt}
+            Elt
          else
-            {GetElt T List}
+            {GetElt PPlay T}
          end
       [] nil then raise('Error in GetElt function : Port not found') end
       else raise('Error in GetElt function : pattern not recognized'#List) end
@@ -522,7 +534,9 @@ define
          [] 6 then Z NewMap in % bonus
             % TODO : ProcessBonus (and send sth to the player)
             {Send PGUI hideBonus(Pos)}
+            {System.show 'inProcessMove : before BuildNewMap'}
             NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
+            {System.show 'After BuildNewMap'}
             NewScoreList = {ChangeList ScoreList PPlay {ProcessBonus PPlay {GetElt PPlay ScoreList}}}
             {System.show 'ProcessMove : case Value == 6, map : '}
             {System.show NewMap}
@@ -719,6 +733,7 @@ define
             % TODO : ProcessBonus (and send sth to the player)
             {Send PGUI hideBonus(Pos)}
             NewMap = {BuildNewMap Map X Y 0 _} % change tile into simple floor
+            {System.show 'after buildnewmap'}
             {System.show 'ProcessMoveSimul function : case 6 ScoreList:'#ScoreList}
             NewScoreList = {ChangeList ScoreList PPlay {ProcessBonus PPlay {GetElt PPlay ScoreList}}} % TODO WARNING WARNING : j'ai mis 0 au lieu de mettre le bon score
             {System.show 'ProcessMove : case Value == 6, map : '}
@@ -743,6 +758,7 @@ define
                {Send PlayerPort doaction(_ Action)}
                {Wait Action} % Obligatoire pour attendre
                {Send SimulPort PlayerPort#ID#Action}
+               {Delay 1000} %TODO WARNING : delete, c'est là pour l'interop
                {SimulSendActions PlayerPort StopVar}
             end
          end
