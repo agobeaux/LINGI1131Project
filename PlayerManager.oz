@@ -5,6 +5,7 @@ import
    Player001Kardashian
    Player001Tao
    Player001Turing
+   Player001Dijkstra
    Player055Clever
    Player013smart
    Player100advanced
@@ -29,6 +30,7 @@ in
       [] kardashian then {Player001Kardashian.portPlayer ID}
       [] tao then {Player001Tao.portPlayer ID}
       [] turing then {Player001Turing.portPlayer ID}
+      [] dijkstra then {Player001Dijkstra.portPlayer ID}
       [] player055Clever then {Player055Clever.portPlayer ID}
       [] player013smart then {Player013smart.portPlayer ID}
       [] player100advanced then {Player100advanced.portPlayer ID}

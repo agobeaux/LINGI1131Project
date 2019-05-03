@@ -179,6 +179,21 @@ The algorithm is the following:
 
 This strategy works very well, and won every single interoperability game it competed in.
 
+\subsubsection{Competitive player}
+The intelligent player, \fn{Player001Dijkstra.ozf}, builds further on what the intelligent player does, by adding the ability to intelligently search for points and bonuses, with the latter being preferred in most cases.
+In order to track where points and bonuses are located, one has to take care of treating the \lstinline|boxRemoved(Pos)| messages.
+The algorithm is the following:
+\begin{itemize}
+	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
+	If multiple neighbours are equally safe, run an iterative deepening depth-first search for points, for bonuses and for boxes of both types.
+	The bomber first tries to hunt for these special targets, prioritizing bonuses, then points, then boxes in the same respective order.
+	Finally, if there are no special targets, the player chooses a random neighbour from the safe options.
+	\item If the player has bombs left, it tries to place a bomb given that it is next to a box (in order to lay bare its content).
+	Otherwise, it moves towards a position according to the algorithm above.
+\end{itemize}
+
+This player is similar to the intelligent player, but avoids the possibility of the game ``dying out'' on bigger maps.
+
 \subsection{Simultaneous players}
 In order to be able to play the game in simultaneous mode, we had to implement a thinking delay in the players when deciding on their next action.
 The code for that is of the form
@@ -279,7 +294,9 @@ While its score there was limited by the fact that our player is rather trigger-
 	\fn{Player001Turing.ozf}, uses a fairly advanced algorithm to determine its next action.
 	\item The GUI has been embellished to resemble the user interface of the Minecraft game.
 	\item The synchronization between the GUI and the controller has been automated, to avoid the game starting while the GUI is still loading.
-	\item Other options were added for the bonus, such as a malus of \(1\) point or the chance to gain an extra life.
+	\item Other options were added for the bonus, such as a malus of \(1\) point.
+	Our players are also able to deal with the \lstinline|add(life, 1)| bonus.
+	\item More interoperability tests were included than required, so as to make sure our implementations are correct.
 \end{itemize}
 
 \section{Conclusion}

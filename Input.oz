@@ -48,9 +48,9 @@ in
 
 %%%% Players description %%%%
 
-   NbBombers = 4
-   Bombers = [turing player055survivor turing player055survivor]
-   ColorBombers = [red orange pink green]
+   NbBombers = 2
+   Bombers = [turing dijkstra]
+   ColorBombers = [red green]
 
 %%%% Parameters %%%%
 
@@ -61,7 +61,7 @@ in
    ThinkMax = 2000 % in millisecond
    
    Fire = 3
-   TimingBomb = 3 
+   TimingBomb = 4
    TimingBombMin = 3000 % in millisecond
    TimingBombMax = 4000 % in millisecond
 
