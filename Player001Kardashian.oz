@@ -13,7 +13,7 @@ define
    TreatStream
 
    % ?
-   Name = 'namefordebug'
+   Name = 'Debug001kardashian'
 
    % Handler functions.
    GetId
