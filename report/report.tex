@@ -70,13 +70,44 @@ This paper presents a brief summary of the results of these tests.
 \IEEEPARstart{B}{omberman} is a famous game.
 
 \section{Controller structure}
+\IEEEPARstart{T}{he} controller in \fn{Main.ozf} can play the game in two modes: turn-by-turn of simultaneously.
+We mainly detail the workflow of the turn-by-turn controller, as the simultaneous controller is very similar to this for the main part.
+
+We use the word ``broadcast'' to signify ``send to all players''.
 
 \subsection{Turn-by-turn controller}
+When the game starts, the controller starts by creating the window, and creates a list of the players and their ports thanks to \fn{Input.ozf} and \fn{PlayerManager.ozf}.
+We then create the map and memorize each player's spawn position, and alert each player of theirs using the \lstinline|assignSpawn(Pos)| message.
+Once the GUI is done creating the map, we call the main function of the controller, which starts running the game in turn-by-turn mode, recursively for each round.
+
+This function starts by determining whether the game is over by checking if any of the endgame conditions are met.
+The controller then checks if there is any fire that needs to be hidden and explodes bombs that run out of time, broadcasting a \lstinline|bombExploded(Pos)| message if needed.
+If any players get hit by the blast, a \lstinline|gotHit(ID Result)| message is sent to them, and information about the death is broadcast to all players.
+The controller also remembers who died and checks which boxes got destroyed.
+Information about this is broadcast with the appropriate message,
+and the endgame conditions are checked again.
+Finally, the controller updates the map.
+This raises the question of how to indicate bonuses and points laid bare by explosions; in order to handle this case, the controller defines two new tiles: a point tile with value \(5\) and a bonus tile with value \(6\).
+When a player moves to one of these, their value is changed back to \(0\), to simulate picking up the reward.
+
+In order to avoid players missing their turn because they got hit by fire before getting a chance to play, we have to respawn the players that died yet still have at least one life left.
+We broadcast the spawn information to all players and update the list of positions.
+To avoid sending \lstinline|doaction(ID Action)| messages to dead players, the controller maintains a counter (implemented with a stream).
+It then checks whether the player's state is \lstinline|on|, skipping the player if not, sending a \lstinline|doaction(ID Action)| message if it is.
+The player then determines what its next action will be.
+If the action matches \lstinline|move(Pos)|, \fn{Main.ozf} checks if any bonuses or points are picked up, and updates the list of positions.
+If the action matches \lstinline|bomb(Pos)|, then the controller tells the GUI to spawn a bomb at the specified position.
+It then sends its blast time on the bomb port.
+The action is broadcast to all players regardless of the action.
+After all this, the function is called recursively and the next turn begins.
 
 \subsection{Simultaneous controller}
+For the simultaneous controller, we had to implement random delays in the players, to account for ``thinking time''.
+This controller is very similar to the turn-by-turn one.
+Conceptually, it works by creating one global thread, common to all players, and then creating a separate thread for every player, sending a \lstinline|doaction(ID Action)| message to each, and waiting for a reply using the \lstinline|Wait| function.
+Once this reply is received, it is then sent to a stream on the main thread and handled in a similar way to how it was handled by the turn-by-turn controller.
 
 \section{Player structure}
-
 \subsection{General structure}
 \IEEEPARstart{I}{n} order to play the game intelligently, players have to store all relevant information about a game; in order to do this in a clean manner, the authors opted to use record structures, which can easily be modified with the \lstinline|AdjoinList| function.
 These records change vary for more advanced players, as they need to store more data about the game in order to make use of their intelligent strategies, but the records always contain at least the following fields:
@@ -129,7 +160,7 @@ In order to track where points and bonuses are located, one has to take care of 
 The algorithm is the following:
 \begin{itemize}
 	\item If the player has no bombs left, move to the least dangerous acceptable neighbour, where the danger rating of a tile is found by initialising it to zero, and then adding points if the tile is in the blast radius of a bomb (taking into account that walls and boxes stop fire from spreading, as well as the distance from the bomb).
-	If multiple neighbours are equally safe, run a breadth-first search for points and one for bonuses.
+	If multiple neighbours are equally safe, run an iterative deepening depth-first search for points and one for bonuses.
 	If possible, the player tries to go for a bonus first, given that the distance to the next bonus is not too big compared to the distance to the next point\footnote{Heuristically, we found a ratio of \(3\) to work fairly well.}.
 	If there is a point target and no bonuses, the player moves towards it on the shortest path.
 	Finally, if there are no special targets, the player chooses a random neighbour from the safe options.
@@ -140,10 +171,11 @@ The algorithm is the following:
 This strategy works very well, and consistently came out as one of the top AIs when competing with other teams.
 
 \section{Interoperability}
-In order to validate our implementation, we carried out interoperability tests with various groups.
+\IEEEPARstart{I}{n} order to validate our implementation, we carried out interoperability tests with various groups.
 These tests helped us to identify misunderstandings in the project specification, as well as find some tricky bugs.
 
 \subsection{Group 55 -- Mulders, Semerikova}
+\subsubsection{\fn{Player055Random}}
 While trying for interoperability with this group, we were reminded that our player is not allowed to place two bombs on the same tile.
 In order to fix this mistake, we had to rework the way the list of bombs is kept.
 Thinking about this also helped us to solve another issue we had when playing simultaneously; with the new design, our implementation was no longer specifically tailored to a certain game mode, i.e. turn-by-turn.
@@ -153,9 +185,13 @@ Since our \fn{Main.ozf} was very robust and did not actually need these values a
 Another issue we ran into while testing our players with this group was that after some rounds, our player would stop planting bombs, despite being under the right circumstances to do so.
 When investigating the code, this came down to a mismatch in specifications between the initialisation of the list of bombs and the \lstinline|case| statement trying to access it.
 
+\subsubsection{\fn{Player005Clever}}
+As we were playing a game against their advanced player, we suggested a different, more efficient approach.
+There were no bugs with their player or their controller, as far as we could see.
+
 
 \section{Extensions and optional parts}
-Some of the proposed extensions and improvements were implemented:
+\IEEEPARstart{S}{ome} of the proposed extensions and improvements were implemented, and the authors added some of their own:
 \begin{itemize}
 	\item As explained in Section~\ref{sec:playerai}, one of our players,
 	\fn{Player001Turing.ozf}, uses a fairly advanced algorithm to determine its next action.
@@ -164,7 +200,7 @@ Some of the proposed extensions and improvements were implemented:
 \end{itemize}
 
 \section{Conclusion}
-Working on this project has helped us to better understand
+\IEEEPARstart{W}{orking} on this project has helped us to better understand
 
 \begin{thebibliography}{1}
 
