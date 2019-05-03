@@ -9,8 +9,29 @@ import
 export
    processMove : ProcessMove % c'était pour le test. TODO : remove ?
 define
-   PGUI
-   PPlayers
+   PGUI % GUI Port
+   PPlayers % Players Port
+   HideFStream % Stream for the hideFire(Pos) signals
+   HideFPort = {NewPort HideFStream} % Port for HideFStream
+
+   PlayersLivesStream % Stream with the players'ID and number of lives (ID#NbLives)|T
+   PPlayersLives = {NewPort PlayersLivesStream} % Port for PlayersLivesStream
+   
+
+   NbDeadsStream % Stream filled with '1' for each dead player
+   PNbDeads = {NewPort NbDeadsStream} % Port for NbDeadsStream
+   PosPlayersTBT % List with the players' ports and their position (PPlay#Pos)|T
+
+   InitNbBoxes % Initial number of boxes (bonus + point boxes)
+   DelayHideF = 100 % in milliseconds, used only in simultaneous
+
+   /**
+    * Assigns a port to each player and returns the list of the players' ports.
+    *
+    * @param      N: number of players we need to create.
+    * @param Colors: bombers' colors.
+    * @param  Names: bombers' names.
+    */
    fun {CreatePlayers N Colors Names}
       if N == 0 then nil
       else
@@ -23,6 +44,14 @@ define
       end
    end
 
+   /**
+    * Spawns the Map and returns a list containing the player's port and position (Port#Position)|T
+    *       and computes the total number of boxes.
+    *
+    * @param      Map: games' map.
+    * @param PPlayers: list with the players' ports.
+    * @param ?NbBoxes: unbound, number of boxes on the map.
+    */
    fun {SpawnMap Map PPlayers NbBoxes}
       
       fun {ProcessElt IdSquare X Y BoxThere}
@@ -819,11 +848,7 @@ define
 
    end
 
-   HideFStream
-   HideFPort = {NewPort HideFStream}
-
-   PPlayersLives
-   PlayersLivesStream
+   
 
    fun {MakeLivesList N}
       if N == 0 then nil
@@ -840,12 +865,7 @@ define
       end
    end
 
-   NbDeadsStream
-   PNbDeads = {NewPort NbDeadsStream}
-   PosPlayersTBT
-
-   InitNbBoxes
-   DelayHideF = 100 % in milliseconds, used only in simultaneous
+   
 in
    %% Implement your controller here
 
@@ -857,7 +877,7 @@ in
    % Create the ports for the players using the PlayerManager and assign its unique ID.
    PPlayers = {CreatePlayers Input.nbBombers Input.colorsBombers Input.bombers}
    
-   PPlayersLives = {NewPort PlayersLivesStream} % will help to construct lists with the number of player's lives
+   
 
    % Spawn bonuses, boxes and players
    PosPlayersTBT = {SpawnMap Input.map PPlayers InitNbBoxes}
