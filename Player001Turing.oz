@@ -27,7 +27,6 @@ define
 
    % Helper functions.
    UpdateMap
-   SetNth
    UpdateBombs
    AddValMap
    ZeroMap
@@ -64,26 +63,6 @@ in
       end % thread
       Port
    end % fun StartPlayer
-
-
-   /**
-    * Set the nth value of a list to a given value.
-    *
-    * @param  Xs: list.
-    * @param   N: index of the value that should be changed.
-    * @param Val: new value of the changed element.
-    */
-   fun {SetNth Xs N Val}
-      fun {DoSetNth Xs N Val Acc}
-         if N == 0 then
-            {Append Acc [Val]}|Xs.2
-         else
-            {DoSetNth Xs.2 N-1 Val {Append Acc [Xs.1]}}
-         end % if
-      end % fun DoSetNth
-   in
-      {DoSetNth Xs N Val nil}
-   end % fun SetNth
 
    /**
     * Update the list of bombs when a bomb has exploded.
@@ -508,6 +487,9 @@ in
          [] point then
             RetResult = Summary.score+Option
             {AdjoinList Summary [score#RetResult]}
+         [] life then
+            RetResult = Summary.lives+Option
+            {AdjoinList Summary [score#Summary.lives+Option]}
          else
             RetResult = 69
             raise('Unknown type in Add.') end
@@ -596,7 +578,14 @@ in
       [] spawn(RetID RetPos)|S then
          {TreatStream S {SpawnF Summary RetID RetPos}}
       [] doaction(RetID RetAction)|S then
-         {TreatStream S {DoAction Summary RetID RetAction}}
+         if Input.isTurnByTurn then
+            {TreatStream S {DoAction Summary RetID RetAction}}
+         else
+            thread
+               {Delay {OS.rand} mod (Input.thinkMax - Input.thinkMin) + Input.thinkMin + 1}
+               {TreatStream S {DoAction Summary RetID RetAction}}
+            end
+         end
       [] add(Type Option RetResult)|S then
          {TreatStream S {Add Summary Type Option RetResult}}
       [] gotHit(RetID RetResult)|S then

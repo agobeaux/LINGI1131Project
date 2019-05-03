@@ -193,8 +193,11 @@ in
             RetResult = Summary.bombs + Option
             {AdjoinList Summary [bombs#Summary.bombs+Option]}
          [] point then
-            RetResult = Summary.score+1
-            {AdjoinList Summary [score#Summary.score+1]}
+            RetResult = Summary.score + Option
+            {AdjoinList Summary [score#Summary.score+Option]}
+         [] life then
+            RetResult = Summary.lives + Option
+            {AdjoinList Summary [score#Summary.lives+Option]}
          else
             RetResult = 69
             raise('Unknown type in Add.') end
@@ -310,7 +313,14 @@ in
       [] spawn(RetID RetPos)|S then
          {TreatStream S {SpawnF Summary RetID RetPos}}
       [] doaction(RetID RetAction)|S then
-         {TreatStream S {DoAction Summary RetID RetAction}}
+         if Input.isTurnByTurn then
+            {TreatStream S {DoAction Summary RetID RetAction}}
+         else
+            thread
+               {Delay {OS.rand} mod (Input.thinkMax - Input.thinkMin) + Input.thinkMin + 1}
+               {TreatStream S {DoAction Summary RetID RetAction}}
+            end
+         end
       [] add(Type Option RetResult)|S then
          {TreatStream S {Add Summary Type Option RetResult}}
       [] gotHit(RetID RetResult)|S then
