@@ -36,14 +36,14 @@ define
 
    % Images definition :
    ObsiWall = {QTk.newImage photo(file:'./img/obsidian.gif' height:50 width:50)}
-   Chest = {QTk.newImage photo(file:'./img/normalchest.gif' height:50 width:50)}
-   SpecialChest = {QTk.newImage photo(file:'./img/netherchest.gif' height:50 width:50)}
-   PointIcon = {QTk.newImage photo(file:'./img/gold.gif' height:50 width:50)}
-   BonusIcon = {QTk.newImage photo(file:'./img/diamond.gif' height:50 width:50)}
+   Chest = {QTk.newImage photo(file:'./img/normalchest.gif' height:30 width:30)}
+   SpecialChest = {QTk.newImage photo(file:'./img/netherchest.gif' height:30 width:30)}
+   PointIcon = {QTk.newImage photo(file:'./img/gold.gif' height:30 width:30)}
+   BonusIcon = {QTk.newImage photo(file:'./img/diamond.gif' height:30 width:30)}
    Grass = {QTk.newImage photo(file:'./img/grass.gif' height:50 width:50)}
    Glass = {QTk.newImage photo(file:'./img/glass.gif' height:50 width:50)}
-   BombIcon = {QTk.newImage photo(file:'./img/creeper.gif' height:50 width:50)}
-   Lava = {QTk.newImage photo(file:'./img/lava.gif' height:50 width:50)}
+   BombIcon = {QTk.newImage photo(file:'./img/creeper.gif' height:30 width:30)}
+   Lava = {QTk.newImage photo(file:'./img/lava.gif' height:30 width:30)}
 
 in
 
@@ -93,18 +93,18 @@ in
 
    
 %%%%% Squares of path and wall
-   Squares = square(0:label(image:Grass width:1 height:1 bg:c(0 0 204))
+   Squares = square(0:label(image:Grass width:1 height:1 bg:c(0 204 120))
 		    1:label(image:ObsiWall borderwidth:5 relief:raised width:1 height:1 bg:c(0 0 0))
-		    2:label(image:Grass width:1 height:1 bg:c(0 0 204))
-		    3:label(image:Grass width:1 height:1 bg:c(0 0 204))
-		    4:label(image:Glass width:1 height:1 bg:c(0 150 150))
+		    2:label(image:Grass width:1 height:1 bg:c(0 204 0))
+		    3:label(image:Grass width:1 height:1 bg:c(0 204 0))
+		    4:label(image:Glass width:1 height:1 bg:c(255 255 255))
 		   )
    Items = items(boxpoint:fun{$ Handle} label(image:Chest borderwidth:2 relief:raised width:30 height:30 bg:c(139 69 19) handle:Handle) end 
 		 boxbonus:fun{$ Handle} label(image:SpecialChest borderwidth:2 relief:raised width:30 height:30 bg:c(210 105 30) handle:Handle) end 
 		 point:fun{$ Handle} label(image:PointIcon height:30 width:30 handle:Handle bg:green) end 
 		 bonus:fun{$ Handle} label(image:BonusIcon height:30 width:30 handle:Handle bg:green) end 
 		 bomb:fun{$ Handle} label(image:BombIcon height:30 width:30 handle:Handle bg:black) end 
-		 fire:fun{$ Handle} label(image:Lava height:40 width:40 handle:Handle bg:green) end 
+		 fire:fun{$ Handle} label(image:Lava height:30 width:30 handle:Handle bg:green) end 
 		)
    
 %%%%% Function to draw the map
@@ -190,7 +190,7 @@ in
       Handle HandleLife HandleScore Id Color LabelPlayer LabelLife LabelScore
    in
       bomber(id:Id color:Color name:_) = ID
-      LabelPlayer = label(text:"P" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
+      LabelPlayer = label(text:"P" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:4 ipady:4)
       LabelLife = label(text:Input.nbLives borderwidth:5 handle:HandleLife relief:solid bg:Color ipadx:5 ipady:5)
       LabelScore = label(text:0 borderwidth:5 handle:HandleScore relief:solid bg:Color ipadx:5 ipady:5)
       {Grid.grid configure(LabelPlayer row:0 column:0 sticky:wesn)}

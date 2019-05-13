@@ -25,6 +25,8 @@ define
    InitNbBoxes % Initial number of boxes (bonus + point boxes)
    DelayHideF = 100 % in milliseconds, used only in simultaneous
 
+   StopVarList % List with unbound variables to know when we have to stop listening to a player (dead, no life left)
+
    /**
     * Assigns a port to each player and returns the list of the players' ports.
     *
@@ -167,7 +169,19 @@ define
       end
    end
 
-
+   proc {BindValue ValList PortList Port}
+      {System.show 'In function BindValue'}
+      case PortList#ValList
+      of (P|TPortList)#(Val|TValList) then
+         if P == Port then
+            {System.show 'In function BindValue, before if Not'}
+            if {Not {Value.isDet Val}} then Val = 0 end
+            {System.show 'In function BindValue, after if Not'}
+         else {BindValue TValList TPortList Port}
+         end
+      else raise('Error in BindValue function : pattern not recognized'#PortList#ValList) end
+      end
+   end
 
 
    fun {ExplodeBomb Pos PortPlayer Map LastEndChangeList PosAndPorts}
@@ -191,6 +205,9 @@ define
                      if NewLife > 0 then
                         {Send PPlayersLives ID#NewLife}
                      else
+                        if {Not Input.isTurnByTurn} then
+                           {BindValue StopVarList PPlayers PPlay}
+                        end
                         {Send PNbDeads 1}
                      end
                      {HitPlayers PosFire T true N-1}
@@ -678,7 +695,7 @@ define
                         {System.show 'State off for ID'#ID}
                         {RunTurn N-1 NewNbAlive T NewBombsList NbTurn+1 NewHideFireStream NMapProcessBombs ScoreList NewPosPlayersList NewLivesList EndListIDLife NewNbDeadS NbBoxes-NbBoxRemoved}
                      else NewNewPosPlayersList NewScoreList in
-                        {Delay 300}
+                        {Delay 150}
                         {Send PPlay doaction(_ Action)}
                         {Wait Action}
                         case Action
@@ -702,7 +719,7 @@ define
                         else raise('Unrecognised msg in function Main.RunTurn') end
                         end
                         %{System.show 'Before delay'}
-                        {Delay 500}
+                        {Delay 300}
                         %{System.show 'After delay'}
                         %{System.show NewBombsList}
                         {RunTurn N-1 NewNbAlive T NewBombsList NbTurn+1 NewHideFireStream NewMap NewScoreList NewNewPosPlayersList NewLivesList EndListIDLife NewNbDeadS NbBoxes-NbBoxRemoved}
@@ -775,13 +792,15 @@ define
       proc {SimulSendActions PlayerPort StopVar} % TODO WARNING WARNING : condition d'arrêt de thread, une variable qui attend d'être bound par ex
          if {Value.isDet StopVar} then
             {System.show 'thread stopped : port'#PlayerPort}
-         else ID State in
-            {Send PlayerPort getState(ID State)}
-            if State == off then
-               skip % TODO WARNING : qué passa si state off et il doit respawn ?
-            else Action in
-               {Send PlayerPort doaction(_ Action)}
-               {Wait Action} % Obligatoire pour attendre
+         else ID Action in
+            {System.show 'Sending doAction'}
+            {Send PlayerPort doaction(ID Action)}
+            {Wait Action} % Obligatoire pour attendre
+            if Action == null then % le player était mort au moment où on a demandé, mais pas d'office mort pour de bon
+               {System.show 'Null action received for player ID : '#ID}
+               {SimulSendActions PlayerPort StopVar}
+            else
+               {System.show 'Action received by player with ID : '#ID}
                {Send SimulPort PlayerPort#ID#Action}
                {SimulSendActions PlayerPort StopVar}
             end
@@ -801,9 +820,10 @@ define
       SimulPort = {NewPort SimulStream}
 
       proc {StopGame ListToBind}
+         {System.show 'In function StopGame'}
          case ListToBind
          of H|T then
-            H = 0
+            if {Not {Value.isDet H}} then H = 0 end
             {StopGame T}
          [] nil then skip
          else raise('Error in StopGame function : pattern not recognized'#ListToBind) end
@@ -833,7 +853,9 @@ define
                   {System.show 'Hehe game finished'}
                   {StopGame StopVarList}
                else
+                  {System.show 'Before waitOr'}
                   _ = {Record.waitOr '#'(1:SimultaneousStream 2:NewBombsStream 3:NewHideFireStream)} % Utile car évite de rappeler trop de fois la fonction sans rien faire
+                  {System.show 'After waitOr'}
                   if {Value.isDet SimultaneousStream} then
                      case SimultaneousStream % TODO WARNING : et si unbound : il faut relancer l'appel récursif pour effectuer les changements ou inutile car liste de changements ?
                      of (PlayerPort#ID#Action)|TSimulStream then State NewMap NewNewPosPlayersList NewScoreList in
@@ -879,7 +901,6 @@ define
          end
       end
       BombsL
-      StopVarList
    in
       BombPort = {NewPort BombsL}
       StopVarList = {InitiateSimulThreads PPlayers}

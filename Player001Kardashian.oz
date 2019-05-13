@@ -317,7 +317,7 @@ in
             {TreatStream S {DoAction Summary RetID RetAction}}
          else
             thread
-               {Delay {OS.rand} mod (Input.thinkMax - Input.thinkMin) + Input.thinkMin + 1}
+               {Delay {OS.rand} mod (Input.thinkMax - Input.thinkMin + 1) + Input.thinkMin}
                {TreatStream S {DoAction Summary RetID RetAction}}
             end
          end
